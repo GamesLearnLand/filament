@@ -49,5 +49,5 @@ android {
 
 dependencies {
     implementation deps.kotlin
-    implementation project(':filament-android')
+    implementation fileTree(include: ['*.aar'], dir: 'libs')
 }
