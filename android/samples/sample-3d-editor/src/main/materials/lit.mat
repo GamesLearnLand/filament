@@ -1,0 +1,39 @@
+//
+// This source material must be compiled to a binary material using the matc tool.
+// The command used to compile this material is:
+// matc -p mobile -a opengl -o app/src/main/assets/materials/lit.filamat app/src/materials/lit.mat
+//
+// See build.gradle for an example of how to compile materials automatically
+// Please refer to the documentation for more information about matc and the materials system.
+
+material {
+    name : lit,
+
+    // Lists the required vertex attributes
+    requires : [
+        position,
+        tangents
+    ],
+
+    // This material uses the lit shading model
+    shadingModel : lit,
+    featureLevel : 0,
+    blending : opaque
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        // Nothing to do here
+    }
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        
+        // Set base color
+        material.baseColor.rgb = materialParams.baseColor.rgb;
+        material.metallic = materialParams.metallic;
+        material.roughness = materialParams.roughness;
+    }
+}
