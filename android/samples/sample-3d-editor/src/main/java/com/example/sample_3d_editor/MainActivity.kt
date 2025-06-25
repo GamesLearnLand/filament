@@ -78,11 +78,14 @@ class MainActivity : Activity() {
     private lateinit var cubeIndexBuffer: IndexBuffer // 存储立方体索引数据的缓冲区
     private lateinit var axisVertexBuffer: VertexBuffer // 存储坐标轴顶点数据的缓冲区
     private lateinit var axisIndexBuffer: IndexBuffer // 存储坐标轴索引数据的缓冲区
+    private lateinit var axisLabelVertexBuffer: VertexBuffer // 存储坐标轴标识的顶点数据缓冲区
+    private lateinit var axisLabelIndexBuffer: IndexBuffer // 存储坐标轴标识的索引数据缓冲区
 
     // 实体（Entities）
     // 实体是场景中的基本对象，通过关联组件（如 Renderable、Transform）来定义其行为和外观。
     @Entity private var cubeRenderable = 0 // 立方体的可渲染实体
     @Entity private var axisRenderable = 0 // 坐标轴的可渲染实体
+    @Entity private var axisLabelRenderable = 0 // 坐标轴标识的可渲染实体
     @Entity private var light = 0 // 光源实体
 
     private var swapChain: SwapChain? = null // 用于将渲染结果呈现到屏幕的交换链
@@ -206,6 +209,8 @@ class MainActivity : Activity() {
         createCubeMesh()
         // 创建坐标轴的网格数据
         createAxisMesh()
+        // 创建坐标轴标识的网格数据
+        createAxisLabelMesh()
         // 创建可渲染实体并将其添加到场景中
         createRenderables()
         // 设置场景光照
@@ -396,6 +401,118 @@ class MainActivity : Activity() {
         axisIndexBuffer.setBuffer(engine, indexData)
     }
 
+    // 创建坐标轴标识的网格数据（在每个轴的端点附近添加小立方体作为标识）
+    private fun createAxisLabelMesh() {
+        val floatSize = 4
+        val vertexSize = 3 * floatSize + 4 * floatSize // 每个顶点的大小（位置 + 颜色）
+        
+        val axisLength = 3.0f
+        val labelSize = 0.15f // 标识立方体的大小
+        val labelOffset = 0.3f // 标识距离轴端点的偏移
+        
+        // 定义带颜色的顶点数据结构
+        data class ColorVertex(val x: Float, val y: Float, val z: Float, val r: Float, val g: Float, val b: Float, val a: Float)
+        fun ByteBuffer.put(v: ColorVertex): ByteBuffer {
+            putFloat(v.x)
+            putFloat(v.y)
+            putFloat(v.z)
+            putFloat(v.r)
+            putFloat(v.g)
+            putFloat(v.b)
+            putFloat(v.a)
+            return this
+        }
+
+        // 创建三个小立方体作为X、Y、Z轴的标识
+        // 每个立方体8个顶点
+        val labelVertexData = ByteBuffer.allocate(24 * vertexSize) // 3个立方体 * 8个顶点
+                .order(ByteOrder.nativeOrder())
+        
+        // X轴标识立方体（红色）- 位于X轴端点附近
+        val xPos = axisLength + labelOffset
+        labelVertexData
+                .put(ColorVertex(xPos - labelSize, -labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+                .put(ColorVertex(xPos + labelSize, -labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+                .put(ColorVertex(xPos + labelSize, labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+                .put(ColorVertex(xPos - labelSize, labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+                .put(ColorVertex(xPos - labelSize, -labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+                .put(ColorVertex(xPos + labelSize, -labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+                .put(ColorVertex(xPos + labelSize, labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+                .put(ColorVertex(xPos - labelSize, labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+        
+        // Y轴标识立方体（绿色）- 位于Y轴端点附近
+        val yPos = axisLength + labelOffset
+        labelVertexData
+                .put(ColorVertex(-labelSize, yPos - labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+                .put(ColorVertex(labelSize, yPos - labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+                .put(ColorVertex(labelSize, yPos + labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+                .put(ColorVertex(-labelSize, yPos + labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+                .put(ColorVertex(-labelSize, yPos - labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+                .put(ColorVertex(labelSize, yPos - labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+                .put(ColorVertex(labelSize, yPos + labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+                .put(ColorVertex(-labelSize, yPos + labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+        
+        // Z轴标识立方体（蓝色）- 位于Z轴端点附近
+        val zPos = axisLength + labelOffset
+        labelVertexData
+                .put(ColorVertex(-labelSize, -labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+                .put(ColorVertex(labelSize, -labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+                .put(ColorVertex(labelSize, labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+                .put(ColorVertex(-labelSize, labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+                .put(ColorVertex(-labelSize, -labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+                .put(ColorVertex(labelSize, -labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+                .put(ColorVertex(labelSize, labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+                .put(ColorVertex(-labelSize, labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+                .flip()
+
+        // 创建坐标轴标识的 VertexBuffer
+        axisLabelVertexBuffer = VertexBuffer.Builder()
+                .bufferCount(1)
+                .vertexCount(24) // 3个立方体 * 8个顶点
+                .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, vertexSize) // 位置属性
+                .attribute(VertexAttribute.COLOR, 0, AttributeType.FLOAT4, 3 * floatSize, vertexSize) // 颜色属性
+                .build(engine)
+        axisLabelVertexBuffer.setBufferAt(engine, 0, labelVertexData)
+
+        // 创建立方体的索引数据（每个立方体12个三角形，36个索引）
+        val indexData = ByteBuffer.allocate(3 * 36 * 2) // 3个立方体 * 36个索引 * 2字节
+                .order(ByteOrder.nativeOrder())
+        
+        // 为每个立方体生成索引
+        repeat(3) { cubeIndex ->
+            val offset = (cubeIndex * 8).toShort()
+            // 立方体的6个面，每个面2个三角形
+            val faces = arrayOf(
+                // 前面
+                shortArrayOf(0, 1, 2, 0, 2, 3),
+                // 后面
+                shortArrayOf(4, 7, 6, 4, 6, 5),
+                // 左面
+                shortArrayOf(0, 3, 7, 0, 7, 4),
+                // 右面
+                shortArrayOf(1, 5, 6, 1, 6, 2),
+                // 底面
+                shortArrayOf(0, 4, 5, 0, 5, 1),
+                // 顶面
+                shortArrayOf(3, 2, 6, 3, 6, 7)
+            )
+            
+            faces.forEach { face ->
+                face.forEach { vertex ->
+                    indexData.putShort((offset + vertex).toShort())
+                }
+            }
+        }
+        indexData.flip()
+
+        // 创建坐标轴标识的 IndexBuffer
+        axisLabelIndexBuffer = IndexBuffer.Builder()
+                .indexCount(108) // 3个立方体 * 36个索引
+                .bufferType(IndexBuffer.Builder.IndexType.USHORT)
+                .build(engine)
+        axisLabelIndexBuffer.setBuffer(engine, indexData)
+    }
+
     // 创建可渲染实体并将其添加到场景中
     private fun createRenderables() {
         // 创建立方体的可渲染实体
@@ -415,6 +532,15 @@ class MainActivity : Activity() {
                 // .material(0, axisMaterialInstance) // 关联材质（已注释）
                 .build(engine, axisRenderable)
         scene.addEntity(axisRenderable)
+        
+        // 创建坐标轴标识的可渲染实体
+        axisLabelRenderable = EntityManager.get().create()
+        RenderableManager.Builder(1)
+                .boundingBox(Box(-4.0f, -4.0f, -4.0f, 4.0f, 4.0f, 4.0f))
+                .geometry(0, PrimitiveType.TRIANGLES, axisLabelVertexBuffer, axisLabelIndexBuffer, 0, 108) // 关联几何体
+                // .material(0, axisMaterialInstance) // 关联材质（已注释）
+                .build(engine, axisLabelRenderable)
+        scene.addEntity(axisLabelRenderable)
     }
 
     // 设置场景光照
@@ -561,11 +687,14 @@ class MainActivity : Activity() {
         engine.destroyEntity(light)
         engine.destroyEntity(cubeRenderable)
         engine.destroyEntity(axisRenderable)
+        engine.destroyEntity(axisLabelRenderable)
         engine.destroyRenderer(renderer)
         engine.destroyVertexBuffer(cubeVertexBuffer)
         engine.destroyIndexBuffer(cubeIndexBuffer)
         engine.destroyVertexBuffer(axisVertexBuffer)
         engine.destroyIndexBuffer(axisIndexBuffer)
+        engine.destroyVertexBuffer(axisLabelVertexBuffer)
+        engine.destroyIndexBuffer(axisLabelIndexBuffer)
         // engine.destroyMaterialInstance(cubeMaterialInstance)
         // engine.destroyMaterialInstance(axisMaterialInstance)
         // engine.destroyMaterial(litMaterial)
@@ -579,6 +708,7 @@ class MainActivity : Activity() {
         entityManager.destroy(light)
         entityManager.destroy(cubeRenderable)
         entityManager.destroy(axisRenderable)
+        entityManager.destroy(axisLabelRenderable)
         entityManager.destroy(camera.entity)
         
         // 最后销毁引擎
