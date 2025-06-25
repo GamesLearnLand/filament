@@ -3,8 +3,8 @@ package com.example.sample_3d_editor
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.opengl.Matrix
 import android.os.Bundle
+import android.util.Log
 import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.Surface
@@ -12,18 +12,35 @@ import android.view.SurfaceView
 import android.view.animation.LinearInterpolator
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
-
-import com.google.android.filament.*
-import com.google.android.filament.RenderableManager.*
-import com.google.android.filament.VertexBuffer.*
+import com.google.android.filament.Box
+import com.google.android.filament.Camera
+import com.google.android.filament.Colors
+import com.google.android.filament.Engine
+import com.google.android.filament.Entity
+import com.google.android.filament.EntityManager
+import com.google.android.filament.Filament
+import com.google.android.filament.IndexBuffer
+import com.google.android.filament.LightManager
+import com.google.android.filament.MathUtils
+import com.google.android.filament.RenderableManager
+import com.google.android.filament.RenderableManager.PrimitiveType
+import com.google.android.filament.Renderer
+import com.google.android.filament.Scene
+import com.google.android.filament.Skybox
+import com.google.android.filament.SwapChain
+import com.google.android.filament.VertexBuffer
+import com.google.android.filament.VertexBuffer.AttributeType
+import com.google.android.filament.VertexBuffer.VertexAttribute
+import com.google.android.filament.View
+import com.google.android.filament.Viewport
 import com.google.android.filament.android.DisplayHelper
 import com.google.android.filament.android.FilamentHelper
 import com.google.android.filament.android.UiHelper
-
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.Channels
-import kotlin.math.*
+import kotlin.math.cos
+import kotlin.math.sin
 
 // MainActivity 是 Filament 3D 编辑器的主界面，负责初始化 UI、Filament 渲染环境、摄像机与场景，并处理用户交互。
 // Filament 是一个实时渲染引擎，提供高效的图形渲染能力。
@@ -46,6 +63,9 @@ class MainActivity : Activity() {
     // 静态代码块，确保在使用 Filament API 前完成初始化。
     // 这是 Filament 的强制要求，必须在使用任何 Filament 功能之前调用。
     companion object {
+
+        const val TAG = "MainActivity"
+
         init {
             Filament.init() // 初始化 Filament 库
         }
@@ -64,7 +84,11 @@ class MainActivity : Activity() {
     private lateinit var renderer: Renderer // 渲染器，负责将场景渲染到 SurfaceView
     private lateinit var scene: Scene // 场景对象，包含所有需要渲染的实体，如模型、光源等
     private lateinit var view: View // 视图对象，定义了场景的观察方式，包括摄像机和视口
-    private lateinit var camera: Camera // 摄像机，定义了观察场景的视角和投影
+
+    /**
+     * 摄像机，定义了观察场景的视角和投影
+     */
+    private lateinit var camera: Camera
 
     // 材质（Materials）
     // 这些材质定义了物体的外观，但在此示例中被注释掉了。
@@ -83,29 +107,49 @@ class MainActivity : Activity() {
 
     // 实体（Entities）
     // 实体是场景中的基本对象，通过关联组件（如 Renderable、Transform）来定义其行为和外观。
-    @Entity private var cubeRenderable = 0 // 立方体的可渲染实体
-    @Entity private var axisRenderable = 0 // 坐标轴的可渲染实体
-    @Entity private var axisLabelRenderable = 0 // 坐标轴标识的可渲染实体
-    @Entity private var light = 0 // 光源实体
+    @Entity
+    private var cubeRenderable = 0 // 立方体的可渲染实体
+
+    @Entity
+    private var axisRenderable = 0 // 坐标轴的可渲染实体
+
+    @Entity
+    private var axisLabelRenderable = 0 // 坐标轴标识的可渲染实体
+
+    @Entity
+    private var light = 0 // 光源实体
 
     private var swapChain: SwapChain? = null // 用于将渲染结果呈现到屏幕的交换链
     private val frameScheduler = FrameCallback() // 帧回调，用于在每一帧触发渲染
     private val animator = ValueAnimator.ofFloat(0.0f, 360.0f) // 用于动画的值动画器
 
     // 摄像机控制参数
-    private var cameraDistance = 8.0f // 摄像机与目标的距离
-    private var cameraAngleX = 30.0f // 摄像机的水平旋转角度
-    private var cameraAngleY = 45.0f // 摄像机的垂直旋转角度
+
+    /**
+     * 摄像机与目标的距离
+     */
+    private var cameraDistance = 8.0f
+
+    /**
+     * 摄像机的水平旋转角度
+     */
+    private var cameraAngleX = 30.0f
+
+    /**
+     * 摄像机的垂直旋转角度
+     */
+    private var cameraAngleY = 45.0f
+
     private val cameraMatrix = FloatArray(16) // 摄像机的变换矩阵
     private val viewMatrix = FloatArray(16) // 视图矩阵
 
     // Activity 的 onCreate 方法，是应用的入口点。
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // 初始化 UI
         setupUI()
-        
+
         // 获取 Choreographer 实例，用于同步渲染循环
         choreographer = Choreographer.getInstance()
         // 初始化 DisplayHelper，用于处理屏幕相关的事件
@@ -126,7 +170,7 @@ class MainActivity : Activity() {
         // 创建根布局
         rootLayout = ConstraintLayout(this)
         rootLayout.setBackgroundColor(0xFF000000.toInt()) // 设置背景为黑色
-        
+
         // 创建 SurfaceView 用于 3D 渲染
         surfaceView = SurfaceView(this)
         val surfaceParams = ConstraintLayout.LayoutParams(
@@ -135,7 +179,7 @@ class MainActivity : Activity() {
         )
         surfaceView.layoutParams = surfaceParams
         rootLayout.addView(surfaceView)
-        
+
         // 创建 TextView 用于显示提示信息
 //        infoText = TextView(this)
 //        infoText.text = "3D坐标轴演示\n点击坐标轴改变视角\n拖拽旋转视图"
@@ -154,7 +198,7 @@ class MainActivity : Activity() {
 //        textParams.setMargins(48, 48, 0, 0)
 //        infoText.layoutParams = textParams
 //        rootLayout.addView(infoText)
-        
+
         // 将根布局设置为 Activity 的内容视图
         setContentView(rootLayout)
     }
@@ -166,7 +210,7 @@ class MainActivity : Activity() {
         uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
         uiHelper.renderCallback = SurfaceCallback()
         uiHelper.attachTo(surfaceView)
-        
+
         // 添加触摸事件监听器，用于控制摄像机
         surfaceView.setOnTouchListener { _, event ->
             handleTouch(event)
@@ -204,7 +248,7 @@ class MainActivity : Activity() {
         // 在此示例中，材质加载和设置被注释掉了
         // loadMaterials()
         // setupMaterials()
-        
+
         // 创建立方体的网格数据
         createCubeMesh()
         // 创建坐标轴的网格数据
@@ -250,6 +294,7 @@ class MainActivity : Activity() {
 
         // 定义顶点数据结构
         data class Vertex(val x: Float, val y: Float, val z: Float, val tangents: FloatArray)
+
         // 扩展 ByteBuffer 以方便地添加顶点数据
         fun ByteBuffer.put(v: Vertex): ByteBuffer {
             putFloat(v.x)
@@ -268,75 +313,81 @@ class MainActivity : Activity() {
         val tfNZ = FloatArray(4)
 
         // 使用 MathUtils.packTangentFrame 计算切线帧
-        MathUtils.packTangentFrame( 0.0f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f,  1.0f,  0.0f,  0.0f, tfPX)
-        MathUtils.packTangentFrame( 0.0f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f, -1.0f,  0.0f,  0.0f, tfNX)
-        MathUtils.packTangentFrame(-1.0f,  0.0f, 0.0f, 0.0f, 0.0f, -1.0f,  0.0f,  1.0f,  0.0f, tfPY)
-        MathUtils.packTangentFrame(-1.0f,  0.0f, 0.0f, 0.0f, 0.0f,  1.0f,  0.0f, -1.0f,  0.0f, tfNY)
-        MathUtils.packTangentFrame( 0.0f,  1.0f, 0.0f, 1.0f, 0.0f,  0.0f,  0.0f,  0.0f,  1.0f, tfPZ)
-        MathUtils.packTangentFrame( 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,  0.0f,  0.0f,  0.0f, -1.0f, tfNZ)
+        MathUtils.packTangentFrame(0.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, tfPX)
+        MathUtils.packTangentFrame(0.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f, -1.0f, 0.0f, 0.0f, tfNX)
+        MathUtils.packTangentFrame(-1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, tfPY)
+        MathUtils.packTangentFrame(-1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f, tfNY)
+        MathUtils.packTangentFrame(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, tfPZ)
+        MathUtils.packTangentFrame(0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, tfNZ)
 
         // 分配 ByteBuffer 并填充顶点数据
         val vertexData = ByteBuffer.allocate(vertexCount * vertexSize)
-                .order(ByteOrder.nativeOrder()) // 使用本地字节序
-                // -Z 面
-                .put(Vertex(-1.0f, -1.0f, -1.0f, tfNZ))
-                .put(Vertex(-1.0f,  1.0f, -1.0f, tfNZ))
-                .put(Vertex( 1.0f,  1.0f, -1.0f, tfNZ))
-                .put(Vertex( 1.0f, -1.0f, -1.0f, tfNZ))
-                // +X 面
-                .put(Vertex( 1.0f, -1.0f, -1.0f, tfPX))
-                .put(Vertex( 1.0f,  1.0f, -1.0f, tfPX))
-                .put(Vertex( 1.0f,  1.0f,  1.0f, tfPX))
-                .put(Vertex( 1.0f, -1.0f,  1.0f, tfPX))
-                // +Z 面
-                .put(Vertex(-1.0f, -1.0f,  1.0f, tfPZ))
-                .put(Vertex( 1.0f, -1.0f,  1.0f, tfPZ))
-                .put(Vertex( 1.0f,  1.0f,  1.0f, tfPZ))
-                .put(Vertex(-1.0f,  1.0f,  1.0f, tfPZ))
-                // -X 面
-                .put(Vertex(-1.0f, -1.0f,  1.0f, tfNX))
-                .put(Vertex(-1.0f,  1.0f,  1.0f, tfNX))
-                .put(Vertex(-1.0f,  1.0f, -1.0f, tfNX))
-                .put(Vertex(-1.0f, -1.0f, -1.0f, tfNX))
-                // -Y 面
-                .put(Vertex(-1.0f, -1.0f,  1.0f, tfNY))
-                .put(Vertex(-1.0f, -1.0f, -1.0f, tfNY))
-                .put(Vertex( 1.0f, -1.0f, -1.0f, tfNY))
-                .put(Vertex( 1.0f, -1.0f,  1.0f, tfNY))
-                // +Y 面
-                .put(Vertex(-1.0f,  1.0f, -1.0f, tfPY))
-                .put(Vertex(-1.0f,  1.0f,  1.0f, tfPY))
-                .put(Vertex( 1.0f,  1.0f,  1.0f, tfPY))
-                .put(Vertex( 1.0f,  1.0f, -1.0f, tfPY))
-                .flip() // 重置缓冲区的位置
+            .order(ByteOrder.nativeOrder()) // 使用本地字节序
+            // -Z 面
+            .put(Vertex(-1.0f, -1.0f, -1.0f, tfNZ))
+            .put(Vertex(-1.0f, 1.0f, -1.0f, tfNZ))
+            .put(Vertex(1.0f, 1.0f, -1.0f, tfNZ))
+            .put(Vertex(1.0f, -1.0f, -1.0f, tfNZ))
+            // +X 面
+            .put(Vertex(1.0f, -1.0f, -1.0f, tfPX))
+            .put(Vertex(1.0f, 1.0f, -1.0f, tfPX))
+            .put(Vertex(1.0f, 1.0f, 1.0f, tfPX))
+            .put(Vertex(1.0f, -1.0f, 1.0f, tfPX))
+            // +Z 面
+            .put(Vertex(-1.0f, -1.0f, 1.0f, tfPZ))
+            .put(Vertex(1.0f, -1.0f, 1.0f, tfPZ))
+            .put(Vertex(1.0f, 1.0f, 1.0f, tfPZ))
+            .put(Vertex(-1.0f, 1.0f, 1.0f, tfPZ))
+            // -X 面
+            .put(Vertex(-1.0f, -1.0f, 1.0f, tfNX))
+            .put(Vertex(-1.0f, 1.0f, 1.0f, tfNX))
+            .put(Vertex(-1.0f, 1.0f, -1.0f, tfNX))
+            .put(Vertex(-1.0f, -1.0f, -1.0f, tfNX))
+            // -Y 面
+            .put(Vertex(-1.0f, -1.0f, 1.0f, tfNY))
+            .put(Vertex(-1.0f, -1.0f, -1.0f, tfNY))
+            .put(Vertex(1.0f, -1.0f, -1.0f, tfNY))
+            .put(Vertex(1.0f, -1.0f, 1.0f, tfNY))
+            // +Y 面
+            .put(Vertex(-1.0f, 1.0f, -1.0f, tfPY))
+            .put(Vertex(-1.0f, 1.0f, 1.0f, tfPY))
+            .put(Vertex(1.0f, 1.0f, 1.0f, tfPY))
+            .put(Vertex(1.0f, 1.0f, -1.0f, tfPY))
+            .flip() // 重置缓冲区的位置
 
         // 创建 VertexBuffer，定义顶点属性
         cubeVertexBuffer = VertexBuffer.Builder()
-                .bufferCount(1) // 使用一个缓冲区
-                .vertexCount(vertexCount) // 顶点数量
-                .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, vertexSize) // 位置属性
-                .attribute(VertexAttribute.TANGENTS, 0, AttributeType.FLOAT4, 3 * floatSize, vertexSize) // 切线属性
-                .build(engine)
+            .bufferCount(1) // 使用一个缓冲区
+            .vertexCount(vertexCount) // 顶点数量
+            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, vertexSize) // 位置属性
+            .attribute(
+                VertexAttribute.TANGENTS,
+                0,
+                AttributeType.FLOAT4,
+                3 * floatSize,
+                vertexSize
+            ) // 切线属性
+            .build(engine)
         // 将顶点数据设置到 VertexBuffer
         cubeVertexBuffer.setBufferAt(engine, 0, vertexData)
 
         // 创建立方体的索引数据
         val shortSize = 2 // Short 类型占用的字节数
         val indexData = ByteBuffer.allocate(6 * 2 * 3 * shortSize) // 6 个面，每个面 2 个三角形，每个三角形 3 个顶点
-                .order(ByteOrder.nativeOrder())
+            .order(ByteOrder.nativeOrder())
         repeat(6) { // 为每个面生成索引
             val i = (it * 4).toShort()
             indexData
-                    .putShort(i).putShort((i + 1).toShort()).putShort((i + 2).toShort())
-                    .putShort(i).putShort((i + 2).toShort()).putShort((i + 3).toShort())
+                .putShort(i).putShort((i + 1).toShort()).putShort((i + 2).toShort())
+                .putShort(i).putShort((i + 2).toShort()).putShort((i + 3).toShort())
         }
         indexData.flip()
 
         // 创建 IndexBuffer
         cubeIndexBuffer = IndexBuffer.Builder()
-                .indexCount(36) // 索引数量
-                .bufferType(IndexBuffer.Builder.IndexType.USHORT) // 索引类型
-                .build(engine)
+            .indexCount(36) // 索引数量
+            .bufferType(IndexBuffer.Builder.IndexType.USHORT) // 索引类型
+            .build(engine)
         // 将索引数据设置到 IndexBuffer
         cubeIndexBuffer.setBuffer(engine, indexData)
     }
@@ -345,12 +396,21 @@ class MainActivity : Activity() {
     private fun createAxisMesh() {
         val floatSize = 4
         val vertexSize = 3 * floatSize + 4 * floatSize // 每个顶点的大小（位置 + 颜色）
-        
+
         // 坐标轴顶点：原点 + 3 个轴端点
         val axisLength = 3.0f
-        
+
         // 定义带颜色的顶点数据结构
-        data class ColorVertex(val x: Float, val y: Float, val z: Float, val r: Float, val g: Float, val b: Float, val a: Float)
+        data class ColorVertex(
+            val x: Float,
+            val y: Float,
+            val z: Float,
+            val r: Float,
+            val g: Float,
+            val b: Float,
+            val a: Float
+        )
+
         fun ByteBuffer.put(v: ColorVertex): ByteBuffer {
             putFloat(v.x)
             putFloat(v.y)
@@ -364,40 +424,46 @@ class MainActivity : Activity() {
 
         // 填充坐标轴的顶点数据
         val axisVertexData = ByteBuffer.allocate(6 * vertexSize)
-                .order(ByteOrder.nativeOrder())
-                // X 轴 (红色)
-                .put(ColorVertex(0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f))
-                .put(ColorVertex(axisLength, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f))
-                // Y 轴 (绿色)
-                .put(ColorVertex(0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
-                .put(ColorVertex(0.0f, axisLength, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
-                // Z 轴 (蓝色)
-                .put(ColorVertex(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f))
-                .put(ColorVertex(0.0f, 0.0f, axisLength, 0.0f, 0.0f, 1.0f, 1.0f))
-                .flip()
+            .order(ByteOrder.nativeOrder())
+            // X 轴 (红色)
+            .put(ColorVertex(0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f))
+            .put(ColorVertex(axisLength, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f))
+            // Y 轴 (绿色)
+            .put(ColorVertex(0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(ColorVertex(0.0f, axisLength, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
+            // Z 轴 (蓝色)
+            .put(ColorVertex(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f))
+            .put(ColorVertex(0.0f, 0.0f, axisLength, 0.0f, 0.0f, 1.0f, 1.0f))
+            .flip()
 
         // 创建坐标轴的 VertexBuffer
         axisVertexBuffer = VertexBuffer.Builder()
-                .bufferCount(1)
-                .vertexCount(6)
-                .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, vertexSize) // 位置属性
-                .attribute(VertexAttribute.COLOR, 0, AttributeType.FLOAT4, 3 * floatSize, vertexSize) // 颜色属性
-                .build(engine)
+            .bufferCount(1)
+            .vertexCount(6)
+            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, vertexSize) // 位置属性
+            .attribute(
+                VertexAttribute.COLOR,
+                0,
+                AttributeType.FLOAT4,
+                3 * floatSize,
+                vertexSize
+            ) // 颜色属性
+            .build(engine)
         axisVertexBuffer.setBufferAt(engine, 0, axisVertexData)
 
         // 创建坐标轴的索引数据 (3 条线)
         val indexData = ByteBuffer.allocate(6 * 2)
-                .order(ByteOrder.nativeOrder())
-                .putShort(0).putShort(1) // X 轴
-                .putShort(2).putShort(3) // Y 轴
-                .putShort(4).putShort(5) // Z 轴
-                .flip()
+            .order(ByteOrder.nativeOrder())
+            .putShort(0).putShort(1) // X 轴
+            .putShort(2).putShort(3) // Y 轴
+            .putShort(4).putShort(5) // Z 轴
+            .flip()
 
         // 创建坐标轴的 IndexBuffer
         axisIndexBuffer = IndexBuffer.Builder()
-                .indexCount(6)
-                .bufferType(IndexBuffer.Builder.IndexType.USHORT)
-                .build(engine)
+            .indexCount(6)
+            .bufferType(IndexBuffer.Builder.IndexType.USHORT)
+            .build(engine)
         axisIndexBuffer.setBuffer(engine, indexData)
     }
 
@@ -405,13 +471,22 @@ class MainActivity : Activity() {
     private fun createAxisLabelMesh() {
         val floatSize = 4
         val vertexSize = 3 * floatSize + 4 * floatSize // 每个顶点的大小（位置 + 颜色）
-        
+
         val axisLength = 3.0f
         val labelSize = 0.15f // 标识立方体的大小
         val labelOffset = 0.3f // 标识距离轴端点的偏移
-        
+
         // 定义带颜色的顶点数据结构
-        data class ColorVertex(val x: Float, val y: Float, val z: Float, val r: Float, val g: Float, val b: Float, val a: Float)
+        data class ColorVertex(
+            val x: Float,
+            val y: Float,
+            val z: Float,
+            val r: Float,
+            val g: Float,
+            val b: Float,
+            val a: Float
+        )
+
         fun ByteBuffer.put(v: ColorVertex): ByteBuffer {
             putFloat(v.x)
             putFloat(v.y)
@@ -426,58 +501,64 @@ class MainActivity : Activity() {
         // 创建三个小立方体作为X、Y、Z轴的标识
         // 每个立方体8个顶点
         val labelVertexData = ByteBuffer.allocate(24 * vertexSize) // 3个立方体 * 8个顶点
-                .order(ByteOrder.nativeOrder())
-        
+            .order(ByteOrder.nativeOrder())
+
         // X轴标识立方体（红色）- 位于X轴端点附近
         val xPos = axisLength + labelOffset
         labelVertexData
-                .put(ColorVertex(xPos - labelSize, -labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-                .put(ColorVertex(xPos + labelSize, -labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-                .put(ColorVertex(xPos + labelSize, labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-                .put(ColorVertex(xPos - labelSize, labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-                .put(ColorVertex(xPos - labelSize, -labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-                .put(ColorVertex(xPos + labelSize, -labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-                .put(ColorVertex(xPos + labelSize, labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-                .put(ColorVertex(xPos - labelSize, labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-        
+            .put(ColorVertex(xPos - labelSize, -labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+            .put(ColorVertex(xPos + labelSize, -labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+            .put(ColorVertex(xPos + labelSize, labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+            .put(ColorVertex(xPos - labelSize, labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+            .put(ColorVertex(xPos - labelSize, -labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+            .put(ColorVertex(xPos + labelSize, -labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+            .put(ColorVertex(xPos + labelSize, labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+            .put(ColorVertex(xPos - labelSize, labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
+
         // Y轴标识立方体（绿色）- 位于Y轴端点附近
         val yPos = axisLength + labelOffset
         labelVertexData
-                .put(ColorVertex(-labelSize, yPos - labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-                .put(ColorVertex(labelSize, yPos - labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-                .put(ColorVertex(labelSize, yPos + labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-                .put(ColorVertex(-labelSize, yPos + labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-                .put(ColorVertex(-labelSize, yPos - labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-                .put(ColorVertex(labelSize, yPos - labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-                .put(ColorVertex(labelSize, yPos + labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-                .put(ColorVertex(-labelSize, yPos + labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-        
+            .put(ColorVertex(-labelSize, yPos - labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(ColorVertex(labelSize, yPos - labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(ColorVertex(labelSize, yPos + labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(ColorVertex(-labelSize, yPos + labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(ColorVertex(-labelSize, yPos - labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(ColorVertex(labelSize, yPos - labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(ColorVertex(labelSize, yPos + labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(ColorVertex(-labelSize, yPos + labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
+
         // Z轴标识立方体（蓝色）- 位于Z轴端点附近
         val zPos = axisLength + labelOffset
         labelVertexData
-                .put(ColorVertex(-labelSize, -labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-                .put(ColorVertex(labelSize, -labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-                .put(ColorVertex(labelSize, labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-                .put(ColorVertex(-labelSize, labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-                .put(ColorVertex(-labelSize, -labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-                .put(ColorVertex(labelSize, -labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-                .put(ColorVertex(labelSize, labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-                .put(ColorVertex(-labelSize, labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-                .flip()
+            .put(ColorVertex(-labelSize, -labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+            .put(ColorVertex(labelSize, -labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+            .put(ColorVertex(labelSize, labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+            .put(ColorVertex(-labelSize, labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+            .put(ColorVertex(-labelSize, -labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+            .put(ColorVertex(labelSize, -labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+            .put(ColorVertex(labelSize, labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+            .put(ColorVertex(-labelSize, labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
+            .flip()
 
         // 创建坐标轴标识的 VertexBuffer
         axisLabelVertexBuffer = VertexBuffer.Builder()
-                .bufferCount(1)
-                .vertexCount(24) // 3个立方体 * 8个顶点
-                .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, vertexSize) // 位置属性
-                .attribute(VertexAttribute.COLOR, 0, AttributeType.FLOAT4, 3 * floatSize, vertexSize) // 颜色属性
-                .build(engine)
+            .bufferCount(1)
+            .vertexCount(24) // 3个立方体 * 8个顶点
+            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, vertexSize) // 位置属性
+            .attribute(
+                VertexAttribute.COLOR,
+                0,
+                AttributeType.FLOAT4,
+                3 * floatSize,
+                vertexSize
+            ) // 颜色属性
+            .build(engine)
         axisLabelVertexBuffer.setBufferAt(engine, 0, labelVertexData)
 
         // 创建立方体的索引数据（每个立方体12个三角形，36个索引）
         val indexData = ByteBuffer.allocate(3 * 36 * 2) // 3个立方体 * 36个索引 * 2字节
-                .order(ByteOrder.nativeOrder())
-        
+            .order(ByteOrder.nativeOrder())
+
         // 为每个立方体生成索引
         repeat(3) { cubeIndex ->
             val offset = (cubeIndex * 8).toShort()
@@ -496,7 +577,7 @@ class MainActivity : Activity() {
                 // 顶面
                 shortArrayOf(3, 2, 6, 3, 6, 7)
             )
-            
+
             faces.forEach { face ->
                 face.forEach { vertex ->
                     indexData.putShort((offset + vertex).toShort())
@@ -507,9 +588,9 @@ class MainActivity : Activity() {
 
         // 创建坐标轴标识的 IndexBuffer
         axisLabelIndexBuffer = IndexBuffer.Builder()
-                .indexCount(108) // 3个立方体 * 36个索引
-                .bufferType(IndexBuffer.Builder.IndexType.USHORT)
-                .build(engine)
+            .indexCount(108) // 3个立方体 * 36个索引
+            .bufferType(IndexBuffer.Builder.IndexType.USHORT)
+            .build(engine)
         axisLabelIndexBuffer.setBuffer(engine, indexData)
     }
 
@@ -518,28 +599,35 @@ class MainActivity : Activity() {
         // 创建立方体的可渲染实体
         cubeRenderable = EntityManager.get().create()
         RenderableManager.Builder(1)
-                .boundingBox(Box(-1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f)) // 设置包围盒，用于剔除
-                .geometry(0, PrimitiveType.TRIANGLES, cubeVertexBuffer, cubeIndexBuffer, 0, 36) // 关联几何体
-                // .material(0, cubeMaterialInstance) // 关联材质（已注释）
-                .build(engine, cubeRenderable)
+            .boundingBox(Box(-1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f)) // 设置包围盒，用于剔除
+            .geometry(0, PrimitiveType.TRIANGLES, cubeVertexBuffer, cubeIndexBuffer, 0, 36) // 关联几何体
+            // .material(0, cubeMaterialInstance) // 关联材质（已注释）
+            .build(engine, cubeRenderable)
         scene.addEntity(cubeRenderable) // 将实体添加到场景
 
         // 创建坐标轴的可渲染实体
         axisRenderable = EntityManager.get().create()
         RenderableManager.Builder(1)
-                .boundingBox(Box(-3.0f, -3.0f, -3.0f, 3.0f, 3.0f, 3.0f))
-                .geometry(0, PrimitiveType.LINES, axisVertexBuffer, axisIndexBuffer, 0, 6) // 关联几何体
-                // .material(0, axisMaterialInstance) // 关联材质（已注释）
-                .build(engine, axisRenderable)
+            .boundingBox(Box(-3.0f, -3.0f, -3.0f, 3.0f, 3.0f, 3.0f))
+            .geometry(0, PrimitiveType.LINES, axisVertexBuffer, axisIndexBuffer, 0, 6) // 关联几何体
+            // .material(0, axisMaterialInstance) // 关联材质（已注释）
+            .build(engine, axisRenderable)
         scene.addEntity(axisRenderable)
-        
+
         // 创建坐标轴标识的可渲染实体
         axisLabelRenderable = EntityManager.get().create()
         RenderableManager.Builder(1)
-                .boundingBox(Box(-4.0f, -4.0f, -4.0f, 4.0f, 4.0f, 4.0f))
-                .geometry(0, PrimitiveType.TRIANGLES, axisLabelVertexBuffer, axisLabelIndexBuffer, 0, 108) // 关联几何体
-                // .material(0, axisMaterialInstance) // 关联材质（已注释）
-                .build(engine, axisLabelRenderable)
+            .boundingBox(Box(-4.0f, -4.0f, -4.0f, 4.0f, 4.0f, 4.0f))
+            .geometry(
+                0,
+                PrimitiveType.TRIANGLES,
+                axisLabelVertexBuffer,
+                axisLabelIndexBuffer,
+                0,
+                108
+            ) // 关联几何体
+            // .material(0, axisMaterialInstance) // 关联材质（已注释）
+            .build(engine, axisLabelRenderable)
         scene.addEntity(axisLabelRenderable)
     }
 
@@ -551,31 +639,37 @@ class MainActivity : Activity() {
         val (r, g, b) = Colors.cct(6_500.0f)
         // 创建平行光
         LightManager.Builder(LightManager.Type.DIRECTIONAL)
-                .color(r, g, b) // 设置颜色
-                .intensity(120_000.0f) // 设置强度
-                .direction(-0.5f, -1.0f, -0.5f) // 设置方向
-                .castShadows(true) // 开启阴影
-                .build(engine, light)
+            .color(r, g, b) // 设置颜色
+            .intensity(120_000.0f) // 设置强度
+            .direction(-0.5f, -1.0f, -0.5f) // 设置方向
+            .castShadows(true) // 开启阴影
+            .build(engine, light)
         // 将光源添加到场景
         scene.addEntity(light)
-        
+
         // 设置摄像机曝光
         camera.setExposure(16.0f, 1.0f / 125.0f, 100.0f)
     }
 
-    // 更新摄像机的位置和朝向
+    /**
+     * 更新摄像机的位置和朝向
+     */
     private fun updateCamera() {
         // 将角度转换为弧度
         val radX = Math.toRadians(cameraAngleX.toDouble())
         val radY = Math.toRadians(cameraAngleY.toDouble())
-        
+
         // 根据距离和角度计算摄像机在球坐标系中的位置
         val x = (cameraDistance * cos(radX) * cos(radY)).toFloat()
         val y = (cameraDistance * sin(radX)).toFloat()
         val z = (cameraDistance * cos(radX) * sin(radY)).toFloat()
-        
+
         // 设置摄像机的位置、目标和上方向
-        camera.lookAt(x.toDouble(), y.toDouble(), z.toDouble(), 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+        camera.lookAt(
+            x.toDouble(), y.toDouble(), z.toDouble(),
+            0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0
+        )
     }
 
     // 触摸事件处理
@@ -591,7 +685,7 @@ class MainActivity : Activity() {
                 lastX = event.x
                 lastY = event.y
                 isDragging = true
-                
+
                 // 检查是否点击了坐标轴端点以切换视角
                 checkAxisClick(event.x, event.y)
                 return true
@@ -601,17 +695,19 @@ class MainActivity : Activity() {
                 if (isDragging) {
                     val deltaX = event.x - lastX
                     val deltaY = event.y - lastY
-                    
+
                     // 更新摄像机角度
                     cameraAngleY += deltaX * 0.5f
-                    cameraAngleX -= deltaY * 0.5f
-                    
+                    cameraAngleX += deltaY * 0.5f
+
+                    Log.d(TAG, "ACTION_MOVE: y:${cameraAngleY};x:${cameraAngleX}")
+
                     // 限制垂直角度范围，防止摄像机翻转
                     cameraAngleX = cameraAngleX.coerceIn(-89f, 89f)
-                    
+
                     // 更新摄像机
                     updateCamera()
-                    
+
                     // 更新最后位置
                     lastX = event.x
                     lastY = event.y
@@ -632,7 +728,7 @@ class MainActivity : Activity() {
         // 简单的点击检测，用于切换坐标轴视角
         val centerX = surfaceView.width / 2f
         val centerY = surfaceView.height / 2f
-        
+
         // 检查点击是否在屏幕下半部分（坐标轴大致位置）
         if (y > centerY + 100) {
             when {
@@ -648,7 +744,7 @@ class MainActivity : Activity() {
         // 使用 ValueAnimator 平滑地过渡到新的摄像机角度
         val startAngleX = cameraAngleX
         val startAngleY = cameraAngleY
-        
+
         ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 500 // 动画时长
             interpolator = LinearInterpolator() // 线性插值器
@@ -678,11 +774,11 @@ class MainActivity : Activity() {
     // Activity onDestroy 时，销毁所有 Filament 资源
     override fun onDestroy() {
         super.onDestroy()
-        
+
         // 停止渲染循环并分离 UiHelper
         choreographer.removeFrameCallback(frameScheduler)
         uiHelper.detach()
-        
+
         // 销毁所有 Filament 创建的资源，防止内存泄漏
         engine.destroyEntity(light)
         engine.destroyEntity(cubeRenderable)
@@ -702,7 +798,7 @@ class MainActivity : Activity() {
         engine.destroyView(view)
         engine.destroyScene(scene)
         engine.destroyCameraComponent(camera.entity)
-        
+
         // 销毁 EntityManager 中的实体
         val entityManager = EntityManager.get()
         entityManager.destroy(light)
@@ -710,7 +806,7 @@ class MainActivity : Activity() {
         entityManager.destroy(axisRenderable)
         entityManager.destroy(axisLabelRenderable)
         entityManager.destroy(camera.entity)
-        
+
         // 最后销毁引擎
         engine.destroy()
     }
@@ -720,7 +816,7 @@ class MainActivity : Activity() {
         override fun doFrame(frameTimeNanos: Long) {
             // 注册下一帧的回调
             choreographer.postFrameCallback(this)
-            
+
             // 如果可以渲染，则开始渲染一帧
             if (uiHelper.isReadyToRender) {
                 if (renderer.beginFrame(swapChain!!, frameTimeNanos)) {

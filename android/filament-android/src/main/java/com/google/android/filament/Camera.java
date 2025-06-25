@@ -118,6 +118,100 @@ import androidx.annotation.Size;
  *
  * @see View
  */
+/**
+ * 相机类 - 代表观察场景的眼睛
+ * <p>
+ * 相机具有位置和方向，并控制投影和曝光参数。
+ *
+ * <h1><u>创建和销毁</u></h1>
+ *
+ * 在Filament中，相机是一个必须与实体关联的组件。要创建相机，
+ * 使用 {@link Engine#createCamera(int)}。相机组件通过
+ * {@link Engine#destroyCameraComponent(int Entity)} 来销毁。
+ *
+ * <pre>
+ *  Camera myCamera = engine.createCamera(myCameraEntity);
+ *  myCamera.setProjection(45, 16.0/9.0, 0.1, 1.0);
+ *  myCamera.lookAt(0, 1.60, 1,
+ *                  0, 0, 0,
+ *                  0, 1, 0);
+ *  engine.destroyCameraComponent(myCameraEntity);
+ * </pre>
+ *
+ *
+ * <h1><u>坐标系统</u></h1>
+ *
+ * 相机坐标系统定义了<b>视图空间</b>。相机指向其-z轴方向，
+ * 其顶部朝向+y方向，右侧朝向+x方向。
+ * <p>
+ * 由于<b>近平面</b>和<b>远平面</b>是通过距离相机的距离来定义的，
+ * 它们各自的坐标是-distance<sub>near</sub>和-distance<sub>far</sub>。
+ *
+ * <h1><u>裁剪平面</u></h1>
+ *
+ * 相机定义了六个<b>裁剪平面</b>，它们共同创建一个<b>裁剪体积</b>。
+ * 此体积外的几何体将被裁剪。
+ * <p>
+ * 裁剪体积可以是盒子或视锥体，这取决于使用的投影类型，
+ * 分别对应 {@link Projection#ORTHO ORTHO} 或 {@link Projection#PERSPECTIVE PERSPECTIVE}。
+ * 这六个平面通过 {@link #setProjection} 或 {@link #setLensProjection} 直接或间接指定。
+ * <p>
+ * 六个平面是：
+ * <ul>
+ * <li> 左平面    </li>
+ * <li> 右平面   </li>
+ * <li> 底平面  </li>
+ * <li> 顶平面     </li>
+ * <li> 近平面    </li>
+ * <li> 远平面     </li>
+ * </ul>
+ * <p>
+ *
+ * 为了提高深度缓冲区精度，<b>远</b>裁剪平面在渲染时总是假设为无穷远。
+ * 也就是说，它不用于在渲染期间裁剪几何体。
+ * 但是，它在剔除阶段使用（完全在<b>远</b>平面后面的对象被剔除）。
+ *
+ * <h1><u>选择<b>近</b>平面距离</u></h1>
+ *
+ * <b>近</b>平面距离极大地影响深度缓冲区分辨率。
+ * <p>
+ *
+ * 示例：假设32位浮点深度缓冲区，在1米、10米、100米和1公里处的精度，
+ * 对应不同的近距离
+ *
+ * <center>
+ * <table border="1">
+ *     <tr>
+ *         <th> 近距离 (m) </th><th> 1 m </th><th> 10 m </th><th> 100 m</th><th> 1 Km </th>
+ *     </tr>
+ *     <tr>
+ *         <td>0.001</td><td>7.2e-5</td><td>0.0043</td><td>0.4624</td><td>48.58</td>
+ *     </tr>
+ *     <tr>
+ *         <td>0.01</td><td>6.9e-6</td><td>0.0001</td><td>0.0430</td><td>4.62</td>
+ *     </tr>
+ *     <tr>
+ *         <td>0.1</td><td>3.6e-7</td><td>7.0e-5</td><td>0.0072</td><td>0.43</td>
+ *     </tr>
+ *     <tr>
+ *         <td>1.0</td><td>0</td><td>3.8e-6</td><td>0.0007</td><td>0.07</td>
+ *     </tr>
+ * </table>
+ * </center>
+ * <p>
+ *
+ * 如上表所示，深度缓冲区精度随着到相机的距离而急剧下降。
+ * <p>
+ * 确保选择尽可能高的<b>近</b>平面距离。
+ *
+ *
+ * <h1><u>曝光</u></h1>
+ *
+ * 相机也用于设置场景的曝光，就像真实相机一样。光源强度和相机曝光
+ * 相互作用产生最终场景的亮度。
+ *
+ * @see View
+ */
 public class Camera {
     private long mNativeObject;
 
@@ -128,10 +222,16 @@ public class Camera {
      * Denotes the projection type used by this camera.
      * @see #setProjection
      */
+    /**
+     * 表示此相机使用的投影类型。
+     * @see #setProjection
+     */
     public enum Projection {
         /** Perspective projection, objects get smaller as they are farther.  */
+        /** 透视投影，物体距离越远显得越小。 */
         PERSPECTIVE,
         /** Orthonormal projection, preserves distances. */
+        /** 正交投影，保持距离不变。 */
         ORTHO
     }
 
@@ -139,13 +239,24 @@ public class Camera {
      * Denotes a field-of-view direction.
      * @see #setProjection
      */
+    /**
+     * 表示视野方向。
+     * @see #setProjection
+     */
     public enum Fov {
         /** The field-of-view angle is defined on the vertical axis. */
+        /** 视野角度在垂直轴上定义。 */
         VERTICAL,
         /** The field-of-view angle is defined on the horizontal axis. */
+        /** 视野角度在水平轴上定义。 */
         HORIZONTAL
     }
 
+    /**
+     * 相机构造函数
+     * @param nativeCamera 本地相机对象指针
+     * @param entity 相机关联的实体ID
+     */
     Camera(long nativeCamera, @Entity int entity) {
         mNativeObject = nativeCamera;
         mEntity = entity;
@@ -187,6 +298,41 @@ public class Camera {
      *
      * @see Projection
      */
+    /**
+     * 从由六个平面定义的视锥体设置投影矩阵。
+     *
+     * @param projection    要使用的投影类型
+     *
+     * @param left          从相机到左平面的世界单位距离，
+     *                      在近平面处。前提条件：<code>left</code> != <code>right</code>
+     *
+     * @param right         从相机到右平面的世界单位距离，
+     *                      在近平面处。前提条件：<code>left</code> != <code>right</code>
+     *
+     * @param bottom        从相机到底平面的世界单位距离，
+     *                      在近平面处。前提条件：<code>bottom</code> != <code>top</code>
+     *
+     * @param top           从相机到顶平面的世界单位距离，
+     *                      在近平面处。前提条件：<code>bottom</code> != <code>top</code>
+     *
+     * @param near          从相机到近平面的世界单位距离。
+     *                      近平面在视图空间中的位置是 z = -<code>near</code>。
+     *                      前提条件：
+     *                      对于 {@link Projection#PERSPECTIVE}，<code>near</code> > 0 或
+     *                      对于 {@link Projection#ORTHO}，<code>near</code> != <code>far</code>。
+     *
+     * @param far           从相机到远平面的世界单位距离。
+     *                      远平面在视图空间中的位置是 z = -<code>far</code>。
+     *                      前提条件：
+     *                      对于 {@link Projection#PERSPECTIVE}，<code>far</code> > <code>near</code>
+     *                              或
+     *                      对于 {@link Projection#ORTHO}，<code>far</code> != <code>near</code>。
+     *
+     * <p>
+     * 这些参数会被静默修改以满足上述前提条件。
+     *
+     * @see Projection
+     */
     public void setProjection(@NonNull Projection projection, double left, double right,
             double bottom, double top, double near, double far) {
         nSetProjection(getNativeObject(), projection.ordinal(), left, right, bottom, top, near, far);
@@ -220,6 +366,33 @@ public class Camera {
      *
      * @see Fov
      */
+    /**
+     * 从视野角度设置投影矩阵。
+     *
+     * @param fovInDegrees  完整视野角度（度）。
+     *                      0 < <code>fovInDegrees</code> < 180
+     *
+     * @param aspect        宽高比 宽度/高度。<code>aspect</code> > 0
+     *
+     * @param near          从相机到近平面的世界单位距离。
+     *                      近平面在视图空间中的位置是 z = -<code>near</code>。
+     *                      前提条件：
+     *                      对于 {@link Projection#PERSPECTIVE}，<code>near</code> > 0 或
+     *                      对于 {@link Projection#ORTHO}，<code>near</code> != <code>far</code>。
+     *
+     * @param far           从相机到远平面的世界单位距离。
+     *                      远平面在视图空间中的位置是 z = -<code>far</code>。
+     *                      前提条件：
+     *                      对于 {@link Projection#PERSPECTIVE}，<code>far</code> > <code>near</code>
+     *                              或
+     *                      对于 {@link Projection#ORTHO}，<code>far</code> != <code>near</code>。
+     *
+     * @param direction    视野参数的方向。
+     * <p>
+     * 这些参数会被静默修改以满足上述前提条件。
+     *
+     * @see Fov
+     */
     public void setProjection(double fovInDegrees, double aspect, double near, double far,
             @NonNull Fov direction) {
         nSetProjectionFov(getNativeObject(), fovInDegrees, aspect, near, far, direction.ordinal());
@@ -247,6 +420,27 @@ public class Camera {
      *                              for {@link Projection#ORTHO}.
      *
      */
+    /**
+     * 从焦距设置投影矩阵。
+     *
+     * @param focalLength   镜头焦距（毫米）。<code>focalLength</code> > 0
+     *
+     * @param aspect        宽高比 宽度/高度。<code>aspect</code> > 0
+     *
+     * @param near          从相机到近平面的世界单位距离。
+     *                      近平面在视图空间中的位置是 z = -<code>near</code>。
+     *                      前提条件：
+     *                      对于 {@link Projection#PERSPECTIVE}，<code>near</code> > 0 或
+     *                      对于 {@link Projection#ORTHO}，<code>near</code> != <code>far</code>。
+     *
+     * @param far           从相机到远平面的世界单位距离。
+     *                      远平面在视图空间中的位置是 z = -<code>far</code>。
+     *                      前提条件：
+     *                      对于 {@link Projection#PERSPECTIVE}，<code>far</code> > <code>near</code>
+     *                              或
+     *                      对于 {@link Projection#ORTHO}，<code>far</code> != <code>near</code>。
+     *
+     */
     public void setLensProjection(double focalLength, double aspect, double near, double far) {
         nSetLensProjection(getNativeObject(), focalLength, aspect, near, far);
     }
@@ -272,6 +466,27 @@ public class Camera {
      *                              for {@link Projection#PERSPECTIVE} or
      *                      <code>far</code> != <code>near</code>
      *                              for {@link Projection#ORTHO}.
+     */
+    /**
+     * 设置自定义投影矩阵。
+     *
+     * <p>投影矩阵必须定义一个符合OpenGL约定的NDC系统，
+     * 即所有3个轴都映射到[-1, 1]。</p>
+     *
+     * @param inProjection  用于渲染和剔除的自定义投影矩阵
+     *
+     * @param near          从相机到近平面的世界单位距离。
+     *                      近平面在视图空间中的位置是 z = -<code>near</code>。
+     *                      前提条件：
+     *                      对于 {@link Projection#PERSPECTIVE}，<code>near</code> > 0 或
+     *                      对于 {@link Projection#ORTHO}，<code>near</code> != <code>far</code>。
+     *
+     * @param far           从相机到远平面的世界单位距离。
+     *                      远平面在视图空间中的位置是 z = -<code>far</code>。
+     *                      前提条件：
+     *                      对于 {@link Projection#PERSPECTIVE}，<code>far</code> > <code>near</code>
+     *                              或
+     *                      对于 {@link Projection#ORTHO}，<code>far</code> != <code>near</code>。
      */
     public void setCustomProjection(@NonNull @Size(min = 16) double[] inProjection,
             double near, double far) {
@@ -302,6 +517,29 @@ public class Camera {
      *                              for {@link Projection#PERSPECTIVE} or
      *                      <code>far</code> != <code>near</code>
      *                              for {@link Projection#ORTHO}.
+     */
+    /**
+     * 设置自定义投影矩阵。
+     *
+     * <p>投影矩阵必须定义一个符合OpenGL约定的NDC系统，
+     * 即所有3个轴都映射到[-1, 1]。</p>
+     *
+     * @param inProjection              用于渲染的自定义投影矩阵。
+     *
+     * @param inProjectionForCulling    用于剔除的自定义投影矩阵。
+     *
+     * @param near          从相机到近平面的世界单位距离。
+     *                      近平面在视图空间中的位置是 z = -<code>near</code>。
+     *                      前提条件：
+     *                      对于 {@link Projection#PERSPECTIVE}，<code>near</code> > 0 或
+     *                      对于 {@link Projection#ORTHO}，<code>near</code> != <code>far</code>。
+     *
+     * @param far           从相机到远平面的世界单位距离。
+     *                      远平面在视图空间中的位置是 z = -<code>far</code>。
+     *                      前提条件：
+     *                      对于 {@link Projection#PERSPECTIVE}，<code>far</code> > <code>near</code>
+     *                              或
+     *                      对于 {@link Projection#ORTHO}，<code>far</code> != <code>near</code>。
      */
     public void setCustomProjection(
             @NonNull @Size(min = 16) double[] inProjection,
@@ -334,6 +572,32 @@ public class Camera {
      *
      * @param xscaling  horizontal scaling to be applied after the projection matrix.
      * @param yscaling  vertical scaling to be applied after the projection matrix.
+     *
+     * @see Camera#setProjection
+     * @see Camera#setLensProjection
+     * @see Camera#setCustomProjection
+     */
+    /**
+     * 设置一个额外的矩阵来缩放投影矩阵。
+     *
+     * <p>这对于独立于投影调整相机的宽高比很有用。
+     * 首先，向setProjection传递1.0的宽高比。然后用所需的宽高比设置缩放：<br>
+     *
+     * <code>
+     *     double aspect = width / height;
+     *
+     *     // 当向setProjection传递Fov.HORIZONTAL时：
+     *     camera.setScaling(1.0, aspect);
+     *
+     *     // 当向setProjection传递Fov.VERTICAL时：
+     *     camera.setScaling(1.0 / aspect, 1.0);
+     * </code>
+     *
+     * 默认情况下，这是一个单位矩阵。
+     * </p>
+     *
+     * @param xscaling  在投影矩阵之后应用的水平缩放。
+     * @param yscaling  在投影矩阵之后应用的垂直缩放。
      *
      * @see Camera#setProjection
      * @see Camera#setLensProjection
@@ -395,6 +659,21 @@ public class Camera {
      * @see Camera#setLensProjection
      * @see Camera#setCustomProjection
      */
+    /**
+     * 设置一个额外的矩阵来偏移（平移）投影矩阵。
+     * <p>
+     * 偏移参数以NDC坐标指定，也就是说，如果平移必须
+     * 以像素指定，xshift和yshift参数应分别按1.0 / viewport.width
+     * 和1.0 / viewport.height进行缩放。
+     * </p>
+     *
+     * @param xshift    在投影之后应用的NDC坐标中的水平偏移
+     * @param yshift    在投影之后应用的NDC坐标中的垂直偏移
+     *
+     * @see Camera#setProjection
+     * @see Camera#setLensProjection
+     * @see Camera#setCustomProjection
+     */
     public void setShift(double xshift, double yshift) {
         nSetShift(getNativeObject(), xshift, yshift);
     }
@@ -414,6 +693,21 @@ public class Camera {
      *
      * @param modelMatrix The camera position and orientation provided as a <b>rigid transform</b> matrix.
      */
+    /**
+     * 设置相机的模型矩阵。
+     * <p>
+     * 设置相机实体变换组件的辅助方法。
+     * 记住相机"看向"其-z轴方向。
+     * <p>
+     * 这与调用以下代码具有相同的效果：
+     *
+     * <pre>
+     *  engine.getTransformManager().setTransform(
+     *          engine.getTransformManager().getInstance(camera->getEntity()), modelMatrix);
+     * </pre>
+     *
+     * @param modelMatrix 作为<b>刚体变换</b>矩阵提供的相机位置和方向。
+     */
     public void setModelMatrix(@NonNull @Size(min = 16) float[] modelMatrix) {
         Asserts.assertMat4fIn(modelMatrix);
         nSetModelMatrix(getNativeObject(), modelMatrix);
@@ -427,6 +721,15 @@ public class Camera {
      * <p>
      *
      * @param modelMatrix The camera position and orientation provided as a <b>rigid transform</b> matrix.
+     */
+    /**
+     * 设置相机的模型矩阵。
+     * <p>
+     * 设置相机实体变换组件的辅助方法。
+     * 记住相机"看向"其-z轴方向。
+     * <p>
+     *
+     * @param modelMatrix 作为<b>刚体变换</b>矩阵提供的相机位置和方向。
      */
     public void setModelMatrix(@NonNull @Size(min = 16) double[] modelMatrix) {
         Asserts.assertMat4In(modelMatrix);
@@ -446,6 +749,19 @@ public class Camera {
      * @param upY       y-axis coordinate of a unit vector denoting the camera's "up" direction
      * @param upZ       z-axis coordinate of a unit vector denoting the camera's "up" direction
      */
+    /**
+     * 设置相机的模型矩阵。
+     *
+     * @param eyeX      相机在世界空间中的x轴位置
+     * @param eyeY      相机在世界空间中的y轴位置
+     * @param eyeZ      相机在世界空间中的z轴位置
+     * @param centerX   相机在世界空间中注视点的x轴位置
+     * @param centerY   相机在世界空间中注视点的y轴位置
+     * @param centerZ   相机在世界空间中注视点的z轴位置
+     * @param upX       表示相机"向上"方向的单位向量的x轴坐标
+     * @param upY       表示相机"向上"方向的单位向量的y轴坐标
+     * @param upZ       表示相机"向上"方向的单位向量的z轴坐标
+     */
     public void lookAt(double eyeX, double eyeY, double eyeZ,
             double centerX, double centerY, double centerZ, double upX, double upY, double upZ) {
         nLookAt(getNativeObject(), eyeX, eyeY, eyeZ, centerX, centerY, centerZ, upX, upY, upZ);
@@ -455,6 +771,10 @@ public class Camera {
      * Gets the distance to the near plane
      * @return Distance to the near plane
      */
+    /**
+     * 获取到近平面的距离
+     * @return 到近平面的距离
+     */
     public float getNear() {
         return (float)nGetNear(getNativeObject());
     }
@@ -462,6 +782,10 @@ public class Camera {
     /**
      * Gets the distance to the far plane
      * @return Distance to the far plane
+     */
+    /**
+     * 获取到远平面的距离
+     * @return 到远平面的距离
      */
     public float getCullingFar() {
         return (float)nGetCullingFar(getNativeObject());
@@ -476,6 +800,16 @@ public class Camera {
      *            case a new array is allocated.
      *
      * @return A 16-float array containing the camera's projection as a column-major matrix.
+     */
+    /**
+     * 获取相机的投影矩阵。用于渲染的投影矩阵总是将
+     * 其远平面设置为无穷大。这就是为什么它可能与通过
+     * setProjection()或setLensProjection()设置的矩阵不同。
+     *
+     * @param out 存储投影矩阵的16个浮点数数组，如果为null则
+     *            分配一个新数组。
+     *
+     * @return 包含相机投影的16个浮点数数组，以列主序矩阵形式。
      */
     @NonNull @Size(min = 16)
     public double[] getProjectionMatrix(@Nullable @Size(min = 16) double[] out) {
@@ -493,6 +827,15 @@ public class Camera {
      *
      * @return A 16-float array containing the camera's projection as a column-major matrix.
      */
+    /**
+     * 获取相机的剔除矩阵。剔除矩阵与投影矩阵相同，
+     * 除了远平面是有限的。
+     *
+     * @param out 存储投影矩阵的16个浮点数数组，如果为null则
+     *            分配一个新数组。
+     *
+     * @return 包含相机投影的16个浮点数数组，以列主序矩阵形式。
+     */
     @NonNull @Size(min = 16)
     public double[] getCullingProjectionMatrix(@Nullable @Size(min = 16) double[] out) {
         out = Asserts.assertMat4d(out);
@@ -504,6 +847,13 @@ public class Camera {
      * Returns the scaling amount used to scale the projection matrix.
      *
      * @return the diagonal of the scaling matrix applied after the projection matrix.
+     *
+     * @see Camera#setScaling
+     */
+    /**
+     * 返回用于缩放投影矩阵的缩放量。
+     *
+     * @return 在投影矩阵之后应用的缩放矩阵的对角线。
      *
      * @see Camera#setScaling
      */
@@ -522,6 +872,15 @@ public class Camera {
      *            case a new array is allocated.
      *
      * @return A 16-float array containing the camera's pose as a column-major matrix.
+     */
+    /**
+     * 获取相机的模型矩阵。模型矩阵编码相机的位置和
+     * 方向或姿态。
+     *
+     * @param out 存储模型矩阵的16个浮点数数组，如果为null则
+     *            分配一个新数组。
+     *
+     * @return 包含相机姿态的16个浮点数数组，以列主序矩阵形式。
      */
     @NonNull @Size(min = 16)
     public float[] getModelMatrix(@Nullable @Size(min = 16) float[] out) {
@@ -554,6 +913,14 @@ public class Camera {
      *
      * @return A 16-float array containing the camera's column-major view matrix.
      */
+    /**
+     * 获取相机的视图矩阵。视图矩阵是模型矩阵的逆矩阵。
+     *
+     * @param out 存储视图矩阵的16个浮点数数组，如果为null则
+     *            分配一个新数组。
+     *
+     * @return 包含相机列主序视图矩阵的16个浮点数数组。
+     */
     @NonNull @Size(min = 16)
     public float[] getViewMatrix(@Nullable @Size(min = 16) float[] out) {
         out = Asserts.assertMat4f(out);
@@ -584,6 +951,13 @@ public class Camera {
      *
      * @return A 3-float array containing the camera's position in world units.
      */
+    /**
+     * 获取相机在世界空间中的位置。
+     *
+     * @param out 存储位置的3个浮点数数组，如果为null则分配一个新数组。
+     *
+     * @return 包含相机在世界单位中位置的3个浮点数数组。
+     */
     @NonNull @Size(min = 3)
     public float[] getPosition(@Nullable @Size(min = 3) float[] out) {
         out = Asserts.assertFloat3(out);
@@ -599,6 +973,13 @@ public class Camera {
      *            array is allocated.
      *
      * @return A 3-float array containing the camera's left vector in world units.
+     */
+    /**
+     * 获取相机在世界空间中的左单位向量，即指向相机左侧的单位向量。
+     *
+     * @param out 存储左向量的3个浮点数数组，如果为null则分配一个新数组。
+     *
+     * @return 包含相机在世界单位中左向量的3个浮点数数组。
      */
     @NonNull @Size(min = 3)
     public float[] getLeftVector(@Nullable @Size(min = 3) float[] out) {
@@ -616,6 +997,13 @@ public class Camera {
      *
      * @return A 3-float array containing the camera's up vector in world units.
      */
+    /**
+     * 获取相机在世界空间中的上单位向量，即相对于相机指向上方的单位向量。
+     *
+     * @param out 存储上向量的3个浮点数数组，如果为null则分配一个新数组。
+     *
+     * @return 包含相机在世界单位中上向量的3个浮点数数组。
+     */
     @NonNull @Size(min = 3)
     public float[] getUpVector(@Nullable @Size(min = 3) float[] out) {
         out = Asserts.assertFloat3(out);
@@ -631,6 +1019,13 @@ public class Camera {
      *           new  array is allocated.
      *
      * @return A 3-float array containing the camera's forward vector in world units.
+     */
+    /**
+     * 获取相机在世界空间中的前向单位向量，即指向相机观察方向的单位向量。
+     *
+     * @param out 存储前向量的3个浮点数数组，如果为null则分配一个新数组。
+     *
+     * @return 包含相机在世界单位中前向量的3个浮点数数组。
      */
     @NonNull @Size(min = 3)
     public float[] getForwardVector(@Nullable @Size(min = 3) float[] out) {
@@ -665,6 +1060,31 @@ public class Camera {
      * @see LightManager
      * @see #setExposure(float)
      */
+    /**
+     * 设置此相机的曝光（默认为f/16，1/125s，100 ISO）
+     *
+     * 曝光最终控制场景的亮度，就像真实相机一样。
+     * 默认值为放置在阳光明媚的日子里户外、太阳在天顶的相机提供充足的曝光。
+     *
+     * 使用默认参数时，场景必须包含至少一个强度
+     * 类似于太阳的光源（例如：100,000勒克斯的方向光）和/或
+     * 适当强度的间接光（30,000）。
+     *
+     * @param aperture      光圈值（f档），限制在0.5和64之间。
+     *                      较低的光圈值增加曝光，导致
+     *                      场景更亮。现实值在0.95和32之间。
+     *
+     * @param shutterSpeed  快门速度（秒），限制在1/25,000和60之间。
+     *                      较低的快门速度增加曝光。现实值在
+     *                      1/8000和30之间。
+     *
+     * @param sensitivity   感光度（ISO），限制在10和204,800之间。
+     *                      较高的感光度增加曝光。现实值在
+     *                      50和25600之间。
+     *
+     * @see LightManager
+     * @see #setExposure(float)
+     */
     public void setExposure(float aperture, float shutterSpeed, float sensitivity) {
         nSetExposure(getNativeObject(), aperture, shutterSpeed, sensitivity);
     }
@@ -683,6 +1103,20 @@ public class Camera {
      * @see LightManager
      * @see #setExposure(float, float, float)
      */
+    /**
+     * 直接设置此相机的曝光。调用此方法将设置光圈
+     * 为1.0，快门速度为1.2，感光度将被计算以匹配
+     * 请求的曝光（对于期望的1.0曝光，感光度将被
+     * 设置为100 ISO）。
+     *
+     * 此方法在尝试匹配其他引擎或工具的照明时很有用。
+     * 许多引擎/工具使用无单位的光强度，可以通过手动设置
+     * 曝光来匹配。这通常可以通过将曝光设置为
+     * 1.0来实现。
+     *
+     * @see LightManager
+     * @see #setExposure(float, float, float)
+     */
     public void setExposure(float exposure) {
         setExposure(1.0f, 1.2f, 100.0f * (1.0f / exposure));
     }
@@ -690,6 +1124,10 @@ public class Camera {
     /**
      * Gets the aperture in f-stops
      * @return Aperture in f-stops
+     */
+    /**
+     * 获取光圈值（f档）
+     * @return 光圈值（f档）
      */
     public float getAperture() {
         return nGetAperture(getNativeObject());
@@ -699,6 +1137,10 @@ public class Camera {
      * Gets the shutter speed in seconds
      * @return Shutter speed in seconds
      */
+    /**
+     * 获取快门速度（秒）
+     * @return 快门速度（秒）
+     */
     public float getShutterSpeed() {
         return nGetShutterSpeed(getNativeObject());
     }
@@ -706,6 +1148,10 @@ public class Camera {
     /**
      * Gets the focal length in meters
      * @return focal length in meters [m]
+     */
+    /**
+     * 获取焦距（米）
+     * @return 焦距（米）[m]
      */
     public double getFocalLength() {
         return nGetFocalLength(getNativeObject());
@@ -716,6 +1162,11 @@ public class Camera {
      * @param distance Distance from the camera to the focus plane in world units. Must be
      *                 positive and larger than the camera's near clipping plane.
      */
+    /**
+     * 设置相机焦距（世界单位）
+     * @param distance 从相机到焦平面的世界单位距离。必须为
+     *                 正值且大于相机的近裁剪平面。
+     */
     public void setFocusDistance(float distance) {
         nSetFocusDistance(getNativeObject(), distance);
     }
@@ -723,6 +1174,10 @@ public class Camera {
     /**
      * Gets the distance from the camera to the focus plane in world units
      * @return Distance from the camera to the focus plane in world units
+     */
+    /**
+     * 获取从相机到焦平面的世界单位距离
+     * @return 从相机到焦平面的世界单位距离
      */
     public float getFocusDistance() {
         return nGetFocusDistance(getNativeObject());
@@ -732,6 +1187,10 @@ public class Camera {
      * Gets the sensitivity in ISO
      * @return Sensitivity in ISO
      */
+    /**
+     * 获取感光度（ISO）
+     * @return 感光度（ISO）
+     */
     public float getSensitivity() {
         return nGetSensitivity(getNativeObject());
     }
@@ -739,6 +1198,10 @@ public class Camera {
     /**
      * Gets the entity representing this Camera
      * @return the entity this Camera component is attached to
+     */
+    /**
+     * 获取代表此相机的实体
+     * @return 此相机组件附加到的实体
      */
     @Entity
     public int getEntity() {
@@ -752,6 +1215,13 @@ public class Camera {
      * @param focusDistance     focus distance in same unit as focalLength
      * @return                  the effective focal length in same unit as focalLength
      */
+    /**
+     * 计算考虑焦距的有效焦距的辅助方法
+     *
+     * @param focalLength       任何单位的焦距（例如[m]或[mm]）
+     * @param focusDistance     与focalLength相同单位的焦距
+     * @return                  与focalLength相同单位的有效焦距
+     */
     static double computeEffectiveFocalLength(double focalLength, double focusDistance) {
         return nComputeEffectiveFocalLength(focalLength, focusDistance);
     }
@@ -762,6 +1232,13 @@ public class Camera {
      * @param fovInDegrees      full field of view in degrees
      * @param focusDistance     focus distance in meters [m]
      * @return                  effective full field of view in degrees
+     */
+    /**
+     * 计算考虑焦距的有效视野的辅助方法
+     *
+     * @param fovInDegrees      完整视野（度）
+     * @param focusDistance     焦距（米）[m]
+     * @return                  有效的完整视野（度）
      */
     static double computeEffectiveFov(double fovInDegrees, double focusDistance) {
         return nComputeEffectiveFov(fovInDegrees, focusDistance);
