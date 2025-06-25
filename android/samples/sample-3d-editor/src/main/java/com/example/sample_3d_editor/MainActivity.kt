@@ -544,7 +544,8 @@ class MainActivity : Activity() {
         axisLabelVertexBuffer = VertexBuffer.Builder()
             .bufferCount(1)
             .vertexCount(24) // 3个立方体 * 8个顶点
-            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, vertexSize) // 位置属性
+            .attribute(VertexAttribute.POSITION, 0,
+                AttributeType.FLOAT3, 0, vertexSize) // 位置属性
             .attribute(
                 VertexAttribute.COLOR,
                 0,
@@ -599,8 +600,11 @@ class MainActivity : Activity() {
         // 创建立方体的可渲染实体
         cubeRenderable = EntityManager.get().create()
         RenderableManager.Builder(1)
-            .boundingBox(Box(-1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f)) // 设置包围盒，用于剔除
-            .geometry(0, PrimitiveType.TRIANGLES, cubeVertexBuffer, cubeIndexBuffer, 0, 36) // 关联几何体
+            .boundingBox(
+                Box(-1.0f, -1.0f, -1.0f,
+                    1.0f, 1.0f, 1.0f)) // 设置包围盒，用于剔除
+            .geometry(0, PrimitiveType.TRIANGLES,
+                cubeVertexBuffer, cubeIndexBuffer, 0, 36) // 关联几何体
             // .material(0, cubeMaterialInstance) // 关联材质（已注释）
             .build(engine, cubeRenderable)
         scene.addEntity(cubeRenderable) // 将实体添加到场景
@@ -608,8 +612,11 @@ class MainActivity : Activity() {
         // 创建坐标轴的可渲染实体
         axisRenderable = EntityManager.get().create()
         RenderableManager.Builder(1)
-            .boundingBox(Box(-3.0f, -3.0f, -3.0f, 3.0f, 3.0f, 3.0f))
-            .geometry(0, PrimitiveType.LINES, axisVertexBuffer, axisIndexBuffer, 0, 6) // 关联几何体
+            .boundingBox(
+                Box(-3.0f, -3.0f, -3.0f,
+                    3.0f, 3.0f, 3.0f))
+            .geometry(0, PrimitiveType.LINES,
+                axisVertexBuffer, axisIndexBuffer, 0, 6) // 关联几何体
             // .material(0, axisMaterialInstance) // 关联材质（已注释）
             .build(engine, axisRenderable)
         scene.addEntity(axisRenderable)
@@ -617,7 +624,8 @@ class MainActivity : Activity() {
         // 创建坐标轴标识的可渲染实体
         axisLabelRenderable = EntityManager.get().create()
         RenderableManager.Builder(1)
-            .boundingBox(Box(-4.0f, -4.0f, -4.0f, 4.0f, 4.0f, 4.0f))
+            .boundingBox(Box(-4.0f, -4.0f, -4.0f,
+                4.0f, 4.0f, 4.0f))
             .geometry(
                 0,
                 PrimitiveType.TRIANGLES,
