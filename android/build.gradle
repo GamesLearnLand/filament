@@ -191,52 +191,52 @@ subprojects {
         google()
     }
 
-    if (!name.startsWith("sample")) {
-        apply plugin: 'com.android.library'
-
-        android {
-            buildToolsVersion versions.buildTools
-            compileSdkVersion versions.compileSdk
-            ndkVersion versions.ndk
-
-            defaultConfig {
-                minSdkVersion versions.minSdk
-                targetSdkVersion versions.targetSdk
-
-                externalNativeBuild {
-                    cmake {
-                        arguments.addAll(rootProject.ext.cmakeArgs)
-                        cppFlags.addAll(rootProject.ext.cppFlags)
-                    }
-                }
-
-                ndk {
-                    //noinspection ChromeOsAbiSupport
-                    abiFilters(*rootProject.ext.abis)
-                }
-
-                consumerProguardFiles '../proguard-rules.pro'
-            }
-
-            externalNativeBuild {
-                cmake {
-                    version "3.19.0+"
-                    path "CMakeLists.txt"
-                }
-            }
-
-            sourceSets {
-                main {
-                    jni.srcDirs "src/main/cpp"
-                }
-            }
-
-            compileOptions {
-                sourceCompatibility versions.jdk
-                targetCompatibility versions.jdk
-            }
-        }
-    }
+//    if (!name.startsWith("sample")) {
+//        apply plugin: 'com.android.library'
+//
+//        android {
+//            buildToolsVersion versions.buildTools
+//            compileSdkVersion versions.compileSdk
+//            ndkVersion versions.ndk
+//
+//            defaultConfig {
+//                minSdkVersion versions.minSdk
+//                targetSdkVersion versions.targetSdk
+//
+//                externalNativeBuild {
+//                    cmake {
+//                        arguments.addAll(rootProject.ext.cmakeArgs)
+//                        cppFlags.addAll(rootProject.ext.cppFlags)
+//                    }
+//                }
+//
+//                ndk {
+//                    //noinspection ChromeOsAbiSupport
+//                    abiFilters(*rootProject.ext.abis)
+//                }
+//
+//                consumerProguardFiles '../proguard-rules.pro'
+//            }
+//
+//            externalNativeBuild {
+//                cmake {
+//                    version "3.19.0+"
+//                    path "CMakeLists.txt"
+//                }
+//            }
+//
+//            sourceSets {
+//                main {
+//                    jni.srcDirs "src/main/cpp"
+//                }
+//            }
+//
+//            compileOptions {
+//                sourceCompatibility versions.jdk
+//                targetCompatibility versions.jdk
+//            }
+//        }
+//    }
 }
 
 gradle.taskGraph.whenReady {

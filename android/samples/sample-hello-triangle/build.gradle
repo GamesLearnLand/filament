@@ -49,5 +49,5 @@ android {
 
 dependencies {
     implementation deps.kotlin
-    implementation fileTree(include: ['*.aar'], dir: 'libs')
+    api project(path: ':samples:library')
 }

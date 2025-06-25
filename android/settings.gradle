@@ -21,3 +21,4 @@ include ':samples:sample-hello-triangle'
 
 rootProject.name = 'filament'
 include ':samples:sample-3d-editor'
+include ':samples:library'
