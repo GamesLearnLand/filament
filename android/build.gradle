@@ -162,6 +162,7 @@ buildscript {
     ext.abis = abis
 
     repositories {
+        maven{ url 'https://maven.aliyun.com/nexus/content/groups/public/'}
         mavenCentral()
         google()
     }
@@ -187,6 +188,7 @@ subprojects {
     version = VERSION_NAME
 
     repositories {
+        maven{ url 'https://maven.aliyun.com/nexus/content/groups/public/'}
         mavenCentral()
         google()
     }
