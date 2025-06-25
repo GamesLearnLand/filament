@@ -53,7 +53,8 @@ android {
 dependencies {
     implementation deps.kotlin
     implementation deps.coroutines.core
-    implementation project(':filament-android')
-    implementation project(':gltfio-android')
-    implementation project(':filament-utils-android')
+//    implementation project(':filament-android')
+//    implementation project(':gltfio-android')
+//    implementation project(':filament-utils-android')
+    api project(path: ':samples:library')
 }
