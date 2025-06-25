@@ -134,23 +134,23 @@ class MainActivity : Activity() {
         rootLayout.addView(surfaceView)
         
         // 创建 TextView 用于显示提示信息
-        infoText = TextView(this)
-        infoText.text = "3D坐标轴演示\n点击坐标轴改变视角\n拖拽旋转视图"
-        infoText.setTextColor(0xFFFFFFFF.toInt()) // 设置文字颜色为白色
-        infoText.textSize = 12f
-        infoText.setPadding(24, 24, 24, 24)
-        infoText.setBackgroundColor(0x80000000.toInt()) // 设置半透明背景
-        
-        // 设置 TextView 的布局参数
-        val textParams = ConstraintLayout.LayoutParams(
-            ConstraintLayout.LayoutParams.WRAP_CONTENT,
-            ConstraintLayout.LayoutParams.WRAP_CONTENT
-        )
-        textParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-        textParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-        textParams.setMargins(48, 48, 0, 0)
-        infoText.layoutParams = textParams
-        rootLayout.addView(infoText)
+//        infoText = TextView(this)
+//        infoText.text = "3D坐标轴演示\n点击坐标轴改变视角\n拖拽旋转视图"
+//        infoText.setTextColor(0xFFFFFFFF.toInt()) // 设置文字颜色为白色
+//        infoText.textSize = 12f
+//        infoText.setPadding(24, 24, 24, 24)
+//        infoText.setBackgroundColor(0x80000000.toInt()) // 设置半透明背景
+//
+//        // 设置 TextView 的布局参数
+//        val textParams = ConstraintLayout.LayoutParams(
+//            ConstraintLayout.LayoutParams.WRAP_CONTENT,
+//            ConstraintLayout.LayoutParams.WRAP_CONTENT
+//        )
+//        textParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+//        textParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+//        textParams.setMargins(48, 48, 0, 0)
+//        infoText.layoutParams = textParams
+//        rootLayout.addView(infoText)
         
         // 将根布局设置为 Activity 的内容视图
         setContentView(rootLayout)
