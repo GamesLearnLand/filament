@@ -1,16 +1,26 @@
+// Filament工具插件的构建配置文件
+// 该文件定义了用于编译Filament材质、网格和IBL的Gradle插件
+
 plugins {
+    // 使用Groovy Gradle插件来支持Groovy语言编写的Gradle插件
     id 'groovy-gradle-plugin'
 }
 
+// 定义Gradle插件的配置
 gradlePlugin {
     plugins {
+        // 创建名为"filament-tools-plugin"的插件
         create("filament-tools-plugin") {
+            // 插件的唯一标识符
             id = "filament-tools-plugin"
+            // 插件的实现类，指向FilamentToolsPlugin类
             implementationClass = "FilamentToolsPlugin"
         }
     }
 }
 
+// 配置依赖仓库
 repositories {
+    // 使用Maven中央仓库获取依赖
     mavenCentral()
 }

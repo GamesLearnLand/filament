@@ -422,12 +422,16 @@ class MainActivity : Activity() {
 
         // 声明网格的布局
         vertexBuffer = VertexBuffer.Builder()
-                .bufferCount(1)           // 使用1个缓冲区
-                .vertexCount(vertexCount) // 顶点数量
+                // 使用1个缓冲区
+                .bufferCount(1)
+                // 顶点数量
+                .vertexCount(vertexCount)
                 // 因为我们交错存储位置和颜色数据，必须指定偏移和步长
                 // 也可以使用分离数据，为每个属性声明不同的缓冲区索引
-                .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, vertexSize)
-                .attribute(VertexAttribute.COLOR, 0, AttributeType.UBYTE4, 3 * floatSize, vertexSize)
+                .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3,
+                    0, vertexSize)
+                .attribute(VertexAttribute.COLOR, 0, AttributeType.UBYTE4,
+                    3 * floatSize, vertexSize)
                 // 颜色存储为无符号字节，但在材质（着色器）中需要0-1范围的值
                 // 所以必须标记属性为归一化
                 .normalized(VertexAttribute.COLOR)
