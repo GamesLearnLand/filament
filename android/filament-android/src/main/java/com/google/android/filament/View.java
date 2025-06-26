@@ -31,28 +31,40 @@ import com.google.android.filament.proguard.UsedByNative;
 
 /**
  * Encompasses all the state needed for rendering a {@link Scene}.
+ * 包含渲染 {@link Scene} 所需的所有状态。
  *
  * <p>
  * {@link Renderer#render} operates on <code>View</code> objects. These <code>View</code> objects
  * specify important parameters such as:
+ * {@link Renderer#render} 操作 <code>View</code> 对象。这些 <code>View</code> 对象
+ * 指定重要的参数，例如：
  * </p>
  *
  * <ul>
  * <li>The Scene</li>
+ * <li>场景</li>
  * <li>The Camera</li>
+ * <li>相机</li>
  * <li>The Viewport</li>
+ * <li>视口</li>
  * <li>Some rendering parameters</li>
+ * <li>一些渲染参数</li>
  * </ul>
  *
  * <p>
  * <code>View</code> instances are heavy objects that internally cache a lot of data needed for
  * rendering. It is not advised for an application to use many View objects.
+ * <code>View</code> 实例是重量级对象，内部缓存了大量渲染所需的数据。
+ * 不建议应用程序使用太多 View 对象。
  * </p>
  *
  * <p>
  * For example, in a game, a <code>View</code> could be used for the main scene and another one for
  * the game's user interface. More <code>View</code> instances could be used for creating special
  * effects (e.g. a <code>View</code> is akin to a rendering pass).
+ * 例如，在游戏中，一个 <code>View</code> 可以用于主场景，另一个用于
+ * 游戏的用户界面。更多的 <code>View</code> 实例可以用于创建特殊
+ * 效果（例如，一个 <code>View</code> 类似于一个渲染通道）。
  * </p>
  *
  * @see Renderer
@@ -90,67 +102,82 @@ public class View {
 
     /**
      * List of available tone-mapping operators
+     * 可用的色调映射操作符列表
      *
      * @deprecated Use ColorGrading instead
+     * @deprecated 请使用 ColorGrading 代替
      */
     @Deprecated
     public enum ToneMapping {
         /**
          * Equivalent to disabling tone-mapping.
+         * 等同于禁用色调映射。
          */
         LINEAR,
 
         /**
          * The Academy Color Encoding System (ACES).
+         * 学院颜色编码系统 (ACES)。
          */
         ACES
     }
 
     /**
      * Used to select buffers.
+     * 用于选择缓冲区。
      */
     public enum TargetBufferFlags {
         /**
          * Color 0 buffer selected.
+         * 选择颜色0缓冲区。
          */
         COLOR0(0x1),
         /**
          * Color 1 buffer selected.
+         * 选择颜色1缓冲区。
          */
         COLOR1(0x2),
         /**
          * Color 2 buffer selected.
+         * 选择颜色2缓冲区。
          */
         COLOR2(0x4),
         /**
          * Color 3 buffer selected.
+         * 选择颜色3缓冲区。
          */
         COLOR3(0x8),
         /**
          * Depth buffer selected.
+         * 选择深度缓冲区。
          */
         DEPTH(0x10),
         /**
          * Stencil buffer selected.
+         * 选择模板缓冲区。
          */
         STENCIL(0x20);
 
         /*
          * No buffer selected
+         * 未选择缓冲区
          */
         public static EnumSet<TargetBufferFlags> NONE = EnumSet.noneOf(TargetBufferFlags.class);
 
         /*
          * All color buffers selected
+         * 选择所有颜色缓冲区
          */
         public static EnumSet<TargetBufferFlags> ALL_COLOR =
                 EnumSet.of(COLOR0, COLOR1, COLOR2, COLOR3);
         /**
          * Depth and stencil buffer selected.
+         * 选择深度和模板缓冲区。
          */
         public static EnumSet<TargetBufferFlags> DEPTH_STENCIL = EnumSet.of(DEPTH, STENCIL);
         /**
          * All buffers are selected.
+         * 选择所有缓冲区。
          */
         public static EnumSet<TargetBufferFlags> ALL = EnumSet.range(COLOR0, STENCIL);
 
@@ -175,6 +202,7 @@ public class View {
 
     /**
      * Sets the View's name. Only useful for debugging.
+     * 设置View的名称。仅用于调试。
      */
     public void setName(@NonNull String name) {
         mName = name;
@@ -183,6 +211,7 @@ public class View {
 
     /**
      * Returns the View's name.
+     * 返回View的名称。
      */
     @Nullable
     public String getName() {
@@ -191,16 +220,21 @@ public class View {
 
     /**
      * Sets this View instance's Scene.
+     * 设置此View实例的场景。
      *
      * <p>
      * This method associates the specified Scene with this View. Note that a particular scene can
      * be associated with several View instances. To remove an existing association, simply pass
      * null.
+     * 此方法将指定的场景与此View关联。请注意，特定场景可以
+     * 与多个View实例关联。要删除现有关联，只需传递null。
      * </p>
      *
      * <p>
      * The View does not take ownership of the Scene pointer. Before destroying a Scene, be sure
      * to remove it from all assoicated Views.
+     * View不拥有Scene指针的所有权。在销毁Scene之前，请确保
+     * 将其从所有关联的View中移除。
      * </p>
      *
      * @see #getScene
@@ -212,6 +246,7 @@ public class View {
 
     /**
      * Gets this View's associated Scene, or null if none has been assigned.
+     * 获取此View关联的场景，如果未分配则返回null。
      *
      * @see #setScene
      */
@@ -222,16 +257,21 @@ public class View {
 
     /**
      * Sets this View's Camera.
+     * 设置此View的相机。
      *
      * <p>
      * This method associates the specified Camera with this View. A Camera can be associated with
      * several View instances. To remove an existing association, simply pass
      * null.
+     * 此方法将指定的相机与此View关联。一个相机可以与
+     * 多个View实例关联。要删除现有关联，只需传递null。
      * </p>
      *
      * <p>
      * The View does not take ownership of the Scene pointer. Before destroying a Camera, be sure
      * to remove it from all assoicated Views.
+     * View不拥有Scene指针的所有权。在销毁相机之前，请确保
+     * 将其从所有关联的View中移除。
      * </p>
      *
      * @see #getCamera
@@ -243,7 +283,9 @@ public class View {
 
     /**
      * Query whether a camera is set.
+     * 查询是否设置了相机。
      * @return true if a camera is set, false otherwise
+     * @return 如果设置了相机则返回true，否则返回false
      * @see #setCamera
      */
     public boolean hasCamera() {
@@ -252,6 +294,7 @@ public class View {
 
     /**
      * Gets this View's associated Camera, or null if none has been assigned.
+     * 获取此View关联的相机，如果未分配则返回null。
      *
      * @see #setCamera
      */
@@ -262,18 +305,24 @@ public class View {
 
     /**
      * Specifies the rectangular rendering area.
+     * 指定矩形渲染区域。
      *
      * <p>
      * The viewport specifies where the content of the View (i.e. the Scene) is rendered in
      * the render target. The render target is automatically clipped to the Viewport.
+     * 视口指定View的内容（即场景）在渲染目标中的渲染位置。
+     * 渲染目标会自动裁剪到视口。
      * </p>
      *
      * <p>
      * If you wish subsequent changes to take effect please call this method again in order to
      * propagate the changes down to the native layer.
+     * 如果您希望后续更改生效，请再次调用此方法以便
+     * 将更改传播到本机层。
      * </p>
      *
      * @param viewport  The Viewport to render the Scene into.
+     * @param viewport  要将场景渲染到的视口。
      */
     public void setViewport(@NonNull Viewport viewport) {
         mViewport = viewport;
@@ -283,6 +332,7 @@ public class View {
 
     /**
      * Returns the rectangular rendering area.
+     * 返回矩形渲染区域。
      *
      * @see #setViewport
      */
@@ -293,8 +343,10 @@ public class View {
 
     /**
      * Sets the blending mode used to draw the view into the SwapChain.
+     * 设置用于将视图绘制到交换链中的混合模式。
      *
      * @param blendMode either {@link BlendMode#OPAQUE} or {@link BlendMode#TRANSLUCENT}
+     * @param blendMode {@link BlendMode#OPAQUE} 或 {@link BlendMode#TRANSLUCENT}
      * @see #getBlendMode
      */
     public void setBlendMode(BlendMode blendMode) {
@@ -303,8 +355,9 @@ public class View {
     }
 
     /**
-     *
+     * 获取混合模式。
      * @return blending mode set by setBlendMode
+     * @return setBlendMode设置的混合模式
      * @see #setBlendMode
      */
     public BlendMode getBlendMode() {
@@ -313,18 +366,25 @@ public class View {
 
     /**
      * Sets which layers are visible.
+     * 设置哪些层可见。
      *
      * <p>
      * Renderable objects can have one or several layers associated to them. Layers are
      * represented with an 8-bits bitmask, where each bit corresponds to a layer.
      * By default all layers are visible.
+     * 可渲染对象可以有一个或多个与之关联的层。层用
+     * 8位位掩码表示，其中每个位对应一个层。
+     * 默认情况下所有层都可见。
      * </p>
      *
      * @see RenderableManager#setLayerMask
      *
      * @param select    a bitmask specifying which layer to set or clear using <code>values</code>.
+     * @param select    指定使用<code>values</code>设置或清除哪个层的位掩码。
      * @param values    a bitmask where each bit sets the visibility of the corresponding layer
      *                  (1: visible, 0: invisible), only layers in <code>select</code> are affected.
+     * @param values    位掩码，其中每个位设置相应层的可见性
+     *                  （1：可见，0：不可见），只有<code>select</code>中的层受影响。
      */
     public void setVisibleLayers(
             @IntRange(from = 0, to = 255) int select,
@@ -334,6 +394,7 @@ public class View {
 
     /**
      * Enables or disables shadow mapping. Enabled by default.
+     * 启用或禁用阴影映射。默认启用。
      *
      * @see LightManager.Builder#castShadows
      * @see RenderableManager.Builder#receiveShadows
@@ -345,6 +406,7 @@ public class View {
 
     /**
      * @return whether shadowing is enabled
+     * @return 是否启用阴影
      */
     boolean isShadowingEnabled() {
         return nIsShadowingEnabled(getNativeObject());
@@ -352,8 +414,10 @@ public class View {
 
     /**
      * Enables or disables screen space refraction. Enabled by default.
+     * 启用或禁用屏幕空间折射。默认启用。
      *
      * @param enabled true enables screen space refraction, false disables it.
+     * @param enabled true启用屏幕空间折射，false禁用它。
      */
     public void setScreenSpaceRefractionEnabled(boolean enabled) {
         nSetScreenSpaceRefractionEnabled(getNativeObject(), enabled);
@@ -361,6 +425,7 @@ public class View {
 
     /**
      * @return whether screen space refraction is enabled
+     * @return 是否启用屏幕空间折射
      */
     boolean isScreenSpaceRefractionEnabled() {
         return nIsScreenSpaceRefractionEnabled(getNativeObject());
@@ -368,18 +433,24 @@ public class View {
 
     /**
      * Specifies an offscreen render target to render into.
+     * 指定要渲染到的离屏渲染目标。
      *
      * <p>
      * By default, the view's associated render target is null, which corresponds to the
      * SwapChain associated with the engine.
+     * 默认情况下，视图关联的渲染目标为null，对应于
+     * 与引擎关联的交换链。
      * </p>
      *
      * <p>
      * A view with a custom render target cannot rely on Renderer.ClearOptions, which only applies
      * to the SwapChain. Such view can use a Skybox instead.
+     * 具有自定义渲染目标的视图不能依赖Renderer.ClearOptions，它仅适用于
+     * 交换链。这样的视图可以使用天空盒代替。
      * </p>
      *
      * @param target render target associated with view, or null for the swap chain
+     * @param target 与视图关联的渲染目标，或null表示交换链
      */
     public void setRenderTarget(@Nullable RenderTarget target) {
         mRenderTarget = target;
@@ -388,8 +459,10 @@ public class View {
 
     /**
      * Gets the offscreen render target associated with this view.
+     * 获取与此视图关联的离屏渲染目标。
      *
      * Returns null if the render target is the swap chain (which is default).
+     * 如果渲染目标是交换链（默认），则返回null。
      *
      * @see #setRenderTarget
      */
@@ -401,15 +474,21 @@ public class View {
     /**
      * Sets how many samples are to be used for MSAA in the post-process stage.
      * Default is 1 and disables MSAA.
+     * 设置在后处理阶段用于MSAA的采样数量。
+     * 默认值为1并禁用MSAA。
      *
      * <p>
      * Note that anti-aliasing can also be performed in the post-processing stage, generally at
      * lower cost. See the FXAA option in {@link #setAntiAliasing}.
+     * 请注意，抗锯齿也可以在后处理阶段执行，通常成本较低。
+     * 请参阅{@link #setAntiAliasing}中的FXAA选项。
      * </p>
      *
      * @param count number of samples to use for multi-sampled anti-aliasing.
+     * @param count 用于多重采样抗锯齿的采样数量。
      *
      * @deprecated use setMultiSampleAntiAliasingOptions instead
+     * @deprecated 请使用setMultiSampleAntiAliasingOptions代替
      */
     @Deprecated
     public void setSampleCount(int count) {
@@ -418,14 +497,18 @@ public class View {
 
     /**
      * Returns the effective MSAA sample count.
+     * 返回有效的MSAA采样数量。
      *
      * <p>
      * A value of 0 or 1 means MSAA is disabled.
+     * 值为0或1表示MSAA被禁用。
      * </p>
      *
      * @return value set by {@link #setSampleCount}
+     * @return {@link #setSampleCount}设置的值
      *
      * @deprecated use getMultiSampleAntiAliasingOptions instead
+     * @deprecated 请使用getMultiSampleAntiAliasingOptions代替
      */
     @Deprecated
     public int getSampleCount() {
@@ -434,12 +517,15 @@ public class View {
 
     /**
      * Enables or disables anti-aliasing in the post-processing stage. Enabled by default.
+     * 在后处理阶段启用或禁用抗锯齿。默认启用。
      *
      * <p>
      * For MSAA anti-aliasing, see {@link #setSampleCount}.
+     * 对于MSAA抗锯齿，请参阅{@link #setSampleCount}。
      * </p>
      *
      * @param type FXAA for enabling, NONE for disabling anti-aliasing.
+     * @param type FXAA用于启用，NONE用于禁用抗锯齿。
      */
     public void setAntiAliasing(@NonNull AntiAliasing type) {
         nSetAntiAliasing(getNativeObject(), type.ordinal());
@@ -448,8 +534,11 @@ public class View {
     /**
      * Queries whether anti-aliasing is enabled during the post-processing stage. To query
      * whether MSAA is enabled, see {@link #getSampleCount}.
+     * 查询在后处理阶段是否启用抗锯齿。要查询
+     * 是否启用MSAA，请参阅{@link #getSampleCount}。
      *
      * @return The post-processing anti-aliasing method.
+     * @return 后处理抗锯齿方法。
      */
     @NonNull
     public AntiAliasing getAntiAliasing() {
@@ -458,8 +547,10 @@ public class View {
 
     /**
      * Enables or disable multi-sample anti-aliasing (MSAA). Disabled by default.
+     * 启用或禁用多重采样抗锯齿（MSAA）。默认禁用。
      *
      * @param options multi-sample anti-aliasing options
+     * @param options 多重采样抗锯齿选项
      */
     public void setMultiSampleAntiAliasingOptions(@NonNull MultiSampleAntiAliasingOptions options) {
         mMultiSampleAntiAliasingOptions = options;
@@ -469,8 +560,10 @@ public class View {
 
     /**
      * Returns multi-sample anti-aliasing options.
+     * 返回多重采样抗锯齿选项。
      *
      * @return multi-sample anti-aliasing options
+     * @return 多重采样抗锯齿选项
      */
     @NonNull
     public MultiSampleAntiAliasingOptions getMultiSampleAntiAliasingOptions() {
@@ -482,8 +575,10 @@ public class View {
 
     /**
      * Enables or disable temporal anti-aliasing (TAA). Disabled by default.
+     * 启用或禁用时间抗锯齿（TAA）。默认禁用。
      *
      * @param options temporal anti-aliasing options
+     * @param options 时间抗锯齿选项
      */
     public void setTemporalAntiAliasingOptions(@NonNull TemporalAntiAliasingOptions options) {
         mTemporalAntiAliasingOptions = options;
@@ -493,8 +588,10 @@ public class View {
 
     /**
      * Returns temporal anti-aliasing options.
+     * 返回时间抗锯齿选项。
      *
      * @return temporal anti-aliasing options
+     * @return 时间抗锯齿选项
      */
     @NonNull
     public TemporalAntiAliasingOptions getTemporalAntiAliasingOptions() {
@@ -506,8 +603,10 @@ public class View {
 
     /**
      * Enables or disable screen-space reflections. Disabled by default.
+     * 启用或禁用屏幕空间反射。默认禁用。
      *
      * @param options screen-space reflections options
+     * @param options 屏幕空间反射选项
      */
     public void setScreenSpaceReflectionsOptions(@NonNull ScreenSpaceReflectionsOptions options) {
         mScreenSpaceReflectionsOptions = options;
@@ -517,8 +616,10 @@ public class View {
 
     /**
      * Returns screen-space reflections options.
+     * 返回屏幕空间反射选项。
      *
      * @return screen-space reflections options
+     * @return 屏幕空间反射选项
      */
     @NonNull
     public ScreenSpaceReflectionsOptions getScreenSpaceReflectionsOptions() {
@@ -530,8 +631,10 @@ public class View {
 
     /**
      * Enables or disable screen-space guard band. Disabled by default.
+     * 启用或禁用屏幕空间保护带。默认禁用。
      *
      * @param options guard band options
+     * @param options 保护带选项
      */
     public void setGuardBandOptions(@NonNull GuardBandOptions options) {
         mGuardBandOptions = options;
@@ -540,8 +643,10 @@ public class View {
 
     /**
      * Returns screen-space guard band options.
+     * 返回屏幕空间保护带选项。
      *
      * @return guard band options
+     * @return 保护带选项
      */
     @NonNull
     public GuardBandOptions getGuardBandOptions() {
@@ -554,10 +659,13 @@ public class View {
 
     /**
      * Enables or disables tone-mapping in the post-processing stage. Enabled by default.
+     * 在后处理阶段启用或禁用色调映射。默认启用。
      *
      * @param type Tone-mapping function.
+     * @param type 色调映射函数。
      *
      * @deprecated Use {@link #setColorGrading(com.google.android.filament.ColorGrading)}
+     * @deprecated 请使用{@link #setColorGrading(com.google.android.filament.ColorGrading)}
      */
     @Deprecated
     public void setToneMapping(@NonNull ToneMapping type) {
@@ -565,9 +673,12 @@ public class View {
 
     /**
      * Returns the tone-mapping function.
+     * 返回色调映射函数。
      * @return tone-mapping function.
+     * @return 色调映射函数。
      *
      * @deprecated Use {@link #getColorGrading()}. This always returns {@link ToneMapping#ACES}
+     * @deprecated 请使用{@link #getColorGrading()}。这总是返回{@link ToneMapping#ACES}
      */
     @Deprecated
     @NonNull
@@ -577,11 +688,16 @@ public class View {
 
     /**
      * Sets this View's color grading transforms.
+     * 设置此View的颜色分级变换。
      *
      * @param colorGrading Associate the specified {@link ColorGrading} to this view. A ColorGrading
      *                     can be associated to several View instances. Can be null to dissociate
      *                     the currently set ColorGrading from this View. Doing so will revert to
      *                     the use of the default color grading transforms.
+     * @param colorGrading 将指定的{@link ColorGrading}与此视图关联。一个ColorGrading
+     *                     可以与多个View实例关联。可以为null以取消
+     *                     当前设置的ColorGrading与此View的关联。这样做将恢复到
+     *                     使用默认的颜色分级变换。
      */
     public void setColorGrading(@Nullable ColorGrading colorGrading) {
         nSetColorGrading(getNativeObject(),
@@ -591,8 +707,10 @@ public class View {
 
     /**
      * Returns the {@link ColorGrading} associated to this view.
+     * 返回与此视图关联的{@link ColorGrading}。
      *
      * @return A {@link ColorGrading} or null if the default {@link ColorGrading} is in use
+     * @return 一个{@link ColorGrading}，如果使用默认{@link ColorGrading}则返回null
      */
     public ColorGrading getColorGrading() {
         return mColorGrading;
@@ -600,8 +718,10 @@ public class View {
 
     /**
      * Enables or disables dithering in the post-processing stage. Enabled by default.
+     * 在后处理阶段启用或禁用抖动。默认启用。
      *
      * @param dithering dithering type
+     * @param dithering 抖动类型
      */
     public void setDithering(@NonNull Dithering dithering) {
         nSetDithering(getNativeObject(), dithering.ordinal());
@@ -609,8 +729,10 @@ public class View {
 
     /**
      * Queries whether dithering is enabled during the post-processing stage.
+     * 查询在后处理阶段是否启用抖动。
      *
      * @return the current dithering type for this view.
+     * @return 此视图的当前抖动类型。
      */
     @NonNull
     public Dithering getDithering() {
@@ -619,18 +741,24 @@ public class View {
 
     /**
      * Sets the dynamic resolution options for this view.
+     * 设置此视图的动态分辨率选项。
      *
      * <p>
      * Dynamic resolution options controls whether dynamic resolution is enabled, and if it is,
      * how it behaves.
+     * 动态分辨率选项控制是否启用动态分辨率，如果启用，
+     * 它如何表现。
      * </p>
      *
      * <p>
      * If you wish subsequent changes to take effect please call this method again in order to
      * propagate the changes down to the native layer.
+     * 如果您希望后续更改生效，请再次调用此方法以便
+     * 将更改传播到本机层。
      * </p>
      *
      * @param options The dynamic resolution options to use on this view
+     * @param options 在此视图上使用的动态分辨率选项
      */
     public void setDynamicResolutionOptions(@NonNull DynamicResolutionOptions options) {
         mDynamicResolution = options;
@@ -645,7 +773,9 @@ public class View {
 
     /**
      * Returns the dynamic resolution options associated with this view.
+     * 返回与此视图关联的动态分辨率选项。
      * @return value set by {@link #setDynamicResolutionOptions}.
+     * @return {@link #setDynamicResolutionOptions}设置的值。
      */
     @NonNull
     public DynamicResolutionOptions getDynamicResolutionOptions() {
@@ -657,8 +787,10 @@ public class View {
 
     /**
      * Sets the rendering quality for this view (e.g. color precision).
+     * 设置此视图的渲染质量（例如颜色精度）。
      *
      * @param renderQuality The render quality to use on this view
+     * @param renderQuality 在此视图上使用的渲染质量
      */
     public void setRenderQuality(@NonNull RenderQuality renderQuality) {
         mRenderQuality = renderQuality;
@@ -667,7 +799,9 @@ public class View {
 
     /**
      * Returns the render quality used by this view.
+     * 返回此视图使用的渲染质量。
      * @return value set by {@link #setRenderQuality}.
+     * @return {@link #setRenderQuality}设置的值。
      */
     @NonNull
     public RenderQuality getRenderQuality() {
@@ -679,6 +813,7 @@ public class View {
 
     /**
      * Returns true if post-processing is enabled.
+     * 如果启用后处理则返回true。
      *
      * @see #setPostProcessingEnabled
      */
@@ -688,26 +823,40 @@ public class View {
 
     /**
      * Enables or disables post processing. Enabled by default.
+     * 启用或禁用后处理。默认启用。
      *
      * <p>Post-processing includes:</p>
+     * <p>后处理包括：</p>
      * <ul>
      * <li>Depth-of-field</li>
+     * <li>景深</li>
      * <li>Bloom</li>
+     * <li>泛光</li>
      * <li>Vignetting</li>
+     * <li>暗角</li>
      * <li>Temporal Anti-aliasing (TAA)</li>
+     * <li>时间抗锯齿（TAA）</li>
      * <li>Color grading & gamma encoding</li>
+     * <li>色彩分级和伽马编码</li>
      * <li>Dithering</li>
+     * <li>抖动</li>
+     * <li>FXAA</li>
      * <li>FXAA</li>
      * <li>Dynamic scaling</li>
+     * <li>动态缩放</li>
      * </ul>
      *
      * <p>
      * Disabling post-processing forgoes color correctness as well as some anti-aliasing techniques
      * and should only be used for debugging, UI overlays or when using custom render targets
      * (see RenderTarget).
+     * 禁用后处理会放弃颜色正确性以及一些抗锯齿技术，
+     * 应该仅用于调试、UI覆盖或使用自定义渲染目标时
+     * （参见RenderTarget）。
      * </p>
      *
      * @param enabled true enables post processing, false disables it
+     * @param enabled true启用后处理，false禁用它
      *
      * @see #setBloomOptions
      * @see #setColorGrading
@@ -720,9 +869,10 @@ public class View {
     }
 
     /**
-     * Returns true if post-processing is enabled.
+     * Returns true if front face winding is inverted.
+     * 如果前面朝向缠绕被反转则返回true。
      *
-     * @see #setPostProcessingEnabled
+     * @see #setFrontFaceWindingInverted
      */
     public boolean isFrontFaceWindingInverted() {
         return nIsFrontFaceWindingInverted(getNativeObject());
@@ -732,14 +882,22 @@ public class View {
      * Inverts the winding order of front faces. By default front faces use a counter-clockwise
      * winding order. When the winding order is inverted, front faces are faces with a clockwise
      * winding order.
+     * 反转前面的缠绕顺序。默认情况下，前面使用逆时针
+     * 缠绕顺序。当缠绕顺序被反转时，前面是具有顺时针
+     * 缠绕顺序的面。
      *
      * Changing the winding order will directly affect the culling mode in materials
      * (see Material#getCullingMode).
+     * 更改缠绕顺序将直接影响材质中的剔除模式
+     * （参见Material#getCullingMode）。
      *
      * Inverting the winding order of front faces is useful when rendering mirrored reflections
      * (water, mirror surfaces, front camera in AR, etc.).
+     * 反转前面的缠绕顺序在渲染镜像反射时很有用
+     * （水面、镜面、AR中的前置摄像头等）。
      *
      * @param inverted True to invert front faces, false otherwise.
+     * @param inverted True反转前面，否则为false。
      */
     public void setFrontFaceWindingInverted(boolean inverted) {
         nSetFrontFaceWindingInverted(getNativeObject(), inverted);
@@ -747,6 +905,7 @@ public class View {
 
     /**
      * Returns true if transparent picking is enabled.
+     * 如果启用透明拾取则返回true。
      *
      * @see #setTransparentPickingEnabled
      */
@@ -756,17 +915,24 @@ public class View {
 
     /**
      * Enables or disables transparent picking. Disabled by default.
+     * 启用或禁用透明拾取。默认禁用。
      *
      * When transparent picking is enabled, View::pick() will pick from both
      * transparent and opaque renderables. When disabled, View::pick() will only
      * pick from opaque renderables.
+     * 当启用透明拾取时，View::pick()将从透明和不透明
+     * 可渲染对象中拾取。当禁用时，View::pick()只会
+     * 从不透明可渲染对象中拾取。
      *
      * <p>
      * Transparent picking will create an extra pass for rendering depth
      * from both transparent and opaque renderables. 
+     * 透明拾取将创建一个额外的通道来渲染
+     * 透明和不透明可渲染对象的深度。
      * </p>
      *
      * @param enabled true enables transparent picking, false disables it.
+     * @param enabled true启用透明拾取，false禁用它。
      */
     public void setTransparentPickingEnabled(boolean enabled) {
         nSetTransparentPickingEnabled(getNativeObject(), enabled);
@@ -774,10 +940,13 @@ public class View {
 
     /**
      * Sets options relative to dynamic lighting for this view.
+     * 设置此视图的动态光照相关选项。
      *
      * <p>
      * Together <code>zLightNear</code> and <code>zLightFar</code> must be chosen so that the
      * visible influence of lights is spread between these two values.
+     * <code>zLightNear</code>和<code>zLightFar</code>必须一起选择，以便
+     * 光源的可见影响分布在这两个值之间。
      * </p>
      *
      * @param zLightNear Distance from the camera where the lights are expected to shine.
@@ -787,10 +956,20 @@ public class View {
      *                   e.g. when standing and looking straight, several meters of the ground
      *                   isn't visible and if lights are expected to shine there, there is no
      *                   point using a short zLightNear. (Default 5m).
+     * @param zLightNear 距离摄像机预期光源照射的距离。
+     *                   此参数可能影响性能，很有用，因为根据
+     *                   场景，靠近摄像机照射的光源可能不
+     *                   可见——在这种情况下，使用较大的值可以提高性能。
+     *                   例如，当站立并直视时，地面的几米
+     *                   不可见，如果光源预期在那里照射，则没有
+     *                   必要使用短的zLightNear。（默认5m）。
      *
      * @param zLightFar Distance from the camera after which lights are not expected to be visible.
      *                  Similarly to zLightNear, setting this value properly can improve
      *                  performance. (Default 100m).
+     * @param zLightFar 距离摄像机之后光源预期不可见的距离。
+     *                  与zLightNear类似，正确设置此值可以提高
+     *                  性能。（默认100m）。
      *
      */
     public void setDynamicLightingOptions(float zLightNear, float zLightFar) {
@@ -799,8 +978,10 @@ public class View {
 
     /**
      * Sets the shadow mapping technique this View uses.
+     * 设置此视图使用的阴影映射技术。
      *
      * The ShadowType affects all the shadows seen within the View.
+     * ShadowType影响视图中看到的所有阴影。
      *
      * <p>
      * {@link ShadowType#VSM} imposes a restriction on marking renderables as only shadow receivers
@@ -808,9 +989,15 @@ public class View {
      * should be marked as both receivers and casters. Objects that are guaranteed to not cast
      * shadows on themselves or other objects (such as flat ground planes) can be set to not cast
      * shadows, which might improve shadow quality.
+     * {@link ShadowType#VSM}对将可渲染对象标记为仅阴影接收者
+     * （但不是投射者）施加限制。为了确保VSM的正确阴影，所有阴影参与的可渲染对象
+     * 应该被标记为接收者和投射者。保证不会在自己或其他对象上投射
+     * 阴影的对象（如平坦的地面）可以设置为不投射
+     * 阴影，这可能会提高阴影质量。
      * </p>
      *
      * <strong>Warning: This API is still experimental and subject to change.</strong>
+     * <strong>警告：此API仍处于实验阶段，可能会发生变化。</strong>
      */
     public void setShadowType(ShadowType type) {
         nSetShadowType(getNativeObject(), type.ordinal());
@@ -818,15 +1005,21 @@ public class View {
 
     /**
      * Sets VSM shadowing options that apply across the entire View.
+     * 设置适用于整个视图的VSM阴影选项。
      *
      * Additional light-specific VSM options can be set with
      * {@link LightManager.Builder#shadowOptions}.
+     * 可以使用{@link LightManager.Builder#shadowOptions}设置
+     * 额外的特定光源VSM选项。
      *
      * Only applicable when shadow type is set to ShadowType::VSM.
+     * 仅在阴影类型设置为ShadowType::VSM时适用。
      *
      * <strong>Warning: This API is still experimental and subject to change.</strong>
+     * <strong>警告：此API仍处于实验阶段，可能会发生变化。</strong>
      *
      * @param options Options for shadowing.
+     * @param options 阴影选项。
      * @see #setShadowType
      */
     public void setVsmShadowOptions(@NonNull VsmShadowOptions options) {
@@ -837,8 +1030,10 @@ public class View {
 
     /**
      * Gets the VSM shadowing options.
+     * 获取VSM阴影选项。
      * @see #setVsmShadowOptions
      * @return VSM shadow options currently set.
+     * @return 当前设置的VSM阴影选项。
      */
     @NonNull
     public VsmShadowOptions getVsmShadowOptions() {
@@ -850,15 +1045,21 @@ public class View {
 
     /**
      * Sets soft shadowing options that apply across the entire View.
+     * 设置适用于整个视图的软阴影选项。
      *
      * Additional light-specific VSM options can be set with
      * {@link LightManager.Builder#shadowOptions}.
+     * 可以使用{@link LightManager.Builder#shadowOptions}设置
+     * 额外的特定光源VSM选项。
      *
      * Only applicable when shadow type is set to ShadowType.DPCF.
+     * 仅在阴影类型设置为ShadowType.DPCF时适用。
      *
      * <strong>Warning: This API is still experimental and subject to change.</strong>
+     * <strong>警告：此API仍处于实验阶段，可能会发生变化。</strong>
      *
      * @param options Options for shadowing.
+     * @param options 阴影选项。
      * @see #setShadowType
      */
     public void setSoftShadowOptions(@NonNull SoftShadowOptions options) {
@@ -868,8 +1069,10 @@ public class View {
 
     /**
      * Gets soft shadowing options associated with this View.
+     * 获取与此视图关联的软阴影选项。
      * @see #setSoftShadowOptions
      * @return soft shadow options currently set.
+     * @return 当前设置的软阴影选项。
      */
     @NonNull
     public SoftShadowOptions getSoftShadowOptions() {
@@ -881,8 +1084,10 @@ public class View {
 
     /**
      * Activates or deactivates ambient occlusion.
+     * 激活或停用环境光遮蔽。
      * @see #setAmbientOcclusionOptions
      * @param ao Type of ambient occlusion to use.
+     * @param ao 要使用的环境光遮蔽类型。
      */
     @Deprecated
     public void setAmbientOcclusion(@NonNull AmbientOcclusion ao) {
@@ -891,8 +1096,10 @@ public class View {
 
     /**
      * Queries the type of ambient occlusion active for this View.
+     * 查询此视图激活的环境光遮蔽类型。
      * @see #getAmbientOcclusionOptions
      * @return ambient occlusion type.
+     * @return 环境光遮蔽类型。
      */
     @Deprecated
     @NonNull
@@ -902,8 +1109,10 @@ public class View {
 
     /**
      * Sets ambient occlusion options.
+     * 设置环境光遮蔽选项。
      *
      * @param options Options for ambient occlusion.
+     * @param options 环境光遮蔽选项。
      */
     public void setAmbientOcclusionOptions(@NonNull AmbientOcclusionOptions options) {
         mAmbientOcclusionOptions = options;
@@ -920,8 +1129,10 @@ public class View {
 
     /**
      * Gets the ambient occlusion options.
+     * 获取环境光遮蔽选项。
      *
      * @return ambient occlusion options currently set.
+     * @return 当前设置的环境光遮蔽选项。
      */
     @NonNull
     public AmbientOcclusionOptions getAmbientOcclusionOptions() {
@@ -933,8 +1144,10 @@ public class View {
 
     /**
      * Sets bloom options.
+     * 设置泛光选项。
      *
      * @param options Options for bloom.
+     * @param options 泛光选项。
      * @see #getBloomOptions
      */
     public void setBloomOptions(@NonNull BloomOptions options) {
@@ -950,9 +1163,11 @@ public class View {
 
     /**
      * Gets the bloom options
+     * 获取泛光选项
      * @see #setBloomOptions
      *
      * @return bloom options currently set.
+     * @return 当前设置的泛光选项。
      */
     @NonNull
     public BloomOptions getBloomOptions() {
@@ -964,8 +1179,10 @@ public class View {
 
     /**
      * Sets vignette options.
+     * 设置暗角选项。
      *
      * @param options Options for vignetting.
+     * @param options 暗角选项。
      * @see #getVignetteOptions
      */
     public void setVignetteOptions(@NonNull VignetteOptions options) {
@@ -979,9 +1196,11 @@ public class View {
 
     /**
      * Gets the vignette options
+     * 获取暗角选项
      * @see #setVignetteOptions
      *
      * @return vignetting options currently set.
+     * @return 当前设置的暗角选项。
      */
     @NonNull
     public VignetteOptions getVignetteOptions() {
@@ -993,8 +1212,10 @@ public class View {
 
     /**
      * Sets fog options.
+     * 设置雾效选项。
      *
      * @param options Options for fog.
+     * @param options 雾效选项。
      * @see #getFogOptions
      */
     public void setFogOptions(@NonNull FogOptions options) {
@@ -1011,8 +1232,10 @@ public class View {
 
     /**
      * Gets the fog options
+     * 获取雾效选项
      *
      * @return fog options currently set.
+     * @return 当前设置的雾效选项。
      * @see #setFogOptions
      */
     @NonNull
@@ -1026,8 +1249,10 @@ public class View {
 
     /**
      * Sets Depth of Field options.
+     * 设置景深选项。
      *
      * @param options Options for depth of field effect.
+     * @param options 景深效果选项。
      * @see #getDepthOfFieldOptions
      */
     public void setDepthOfFieldOptions(@NonNull DepthOfFieldOptions options) {
@@ -1040,8 +1265,10 @@ public class View {
 
     /**
      * Gets the Depth of Field options
+     * 获取景深选项
      *
      * @return Depth of Field options currently set.
+     * @return 当前设置的景深选项。
      * @see #setDepthOfFieldOptions
      */
     @NonNull
@@ -1054,11 +1281,15 @@ public class View {
 
     /**
      * Enables use of the stencil buffer.
+     * 启用模板缓冲区的使用。
      *
      * <p>
      * The stencil buffer is an 8-bit, per-fragment unsigned integer stored alongside the depth
      * buffer. The stencil buffer is cleared at the beginning of a frame and discarded after the
      * color pass.
+     * 模板缓冲区是一个8位的、每个片段的无符号整数，与深度
+     * 缓冲区一起存储。模板缓冲区在帧开始时被清除，在
+     * 颜色通道后被丢弃。
      * </p>
      *
      * <p>
@@ -1066,19 +1297,28 @@ public class View {
      * a {@link Material}. The stencil buffer can be used as a mask for later rendering by setting a
      * {@link Material}'s stencil comparison function and reference value. Fragments that don't pass
      * the stencil test are then discarded.
+     * 每个片段的模板值在光栅化期间通过在{@link Material}上指定模板操作来设置。
+     * 模板缓冲区可以通过设置{@link Material}的模板比较函数和参考值
+     * 用作后续渲染的掩码。不通过模板测试的片段
+     * 然后被丢弃。
      * </p>
      *
      * <p>
      * If post-processing is disabled, then the SwapChain must have the CONFIG_HAS_STENCIL_BUFFER
      * flag set in order to use the stencil buffer.
+     * 如果禁用后处理，则SwapChain必须设置CONFIG_HAS_STENCIL_BUFFER
+     * 标志才能使用模板缓冲区。
      * </p>
      *
      * <p>
      * A renderable's priority (see {@link RenderableManager#setPriority(int, int)}) is useful to
      * control the order in which primitives are drawn.
+     * 可渲染对象的优先级（参见{@link RenderableManager#setPriority(int, int)}）对于
+     * 控制绘制图元的顺序很有用。
      * </p>
      *
      * @param enabled True to enable the stencil buffer, false disables it (default)
+     * @param enabled True启用模板缓冲区，false禁用它（默认）
      */
     public void setStencilBufferEnabled(boolean enabled) {
         nSetStencilBufferEnabled(getNativeObject(), enabled);
@@ -1086,6 +1326,7 @@ public class View {
 
     /**
      * @return true if the stencil buffer is enabled.
+     * @return 如果启用模板缓冲区则返回true。
      * @see View#setStencilBufferEnabled(boolean)
      */
     public boolean isStencilBufferEnabled() {
@@ -1094,11 +1335,15 @@ public class View {
 
     /**
      * Sets the stereoscopic rendering options for this view.
+     * 设置此视图的立体渲染选项。
      *
      * <p>
      * Currently, only one type of stereoscopic rendering is supported: side-by-side.
      * Side-by-side stereo rendering splits the viewport into two halves: a left and right half.
      * Eye 0 will render to the left half, while Eye 1 will render into the right half.
+     * 目前，只支持一种立体渲染类型：并排。
+     * 并排立体渲染将视口分为两半：左半部分和右半部分。
+     * 眼睛0将渲染到左半部分，而眼睛1将渲染到右半部分。
      * </p>
      *
      * <p>
@@ -1106,15 +1351,23 @@ public class View {
      * - post-processing
      * - shadowing
      * - punctual lights
+     * 目前，立体渲染不支持以下功能：
+     * - 后处理
+     * - 阴影
+     * - 点光源
      * </p>
      *
      * <p>
      * Stereo rendering depends on device and platform support. To check if stereo rendering is
      * supported, use {@link Engine#isStereoSupported()}. If stereo rendering is not supported, then
      * the stereoscopic options have no effect.
+     * 立体渲染取决于设备和平台支持。要检查是否支持立体渲染，
+     * 请使用{@link Engine#isStereoSupported()}。如果不支持立体渲染，则
+     * 立体选项无效。
      * </p>
      *
      * @param options The stereoscopic options to use on this view
+     * @param options 在此视图上使用的立体选项
      * @see #getStereoscopicOptions
      */
     public void setStereoscopicOptions(@NonNull StereoscopicOptions options) {
@@ -1124,8 +1377,10 @@ public class View {
 
     /**
      * Gets the stereoscopic options.
+     * 获取立体选项。
      *
      * @return options Stereoscopic options currently set.
+     * @return options 当前设置的立体选项。
      * @see #setStereoscopicOptions
      */
     @NonNull
@@ -1139,24 +1394,31 @@ public class View {
 
     /**
      * A class containing the result of a picking query
+     * 包含拾取查询结果的类
      */
     public static class PickingQueryResult {
         /** The entity of the renderable at the picking query location */
+        /** 拾取查询位置处可渲染对象的实体 */
         @Entity public int renderable;
         /** The value of the depth buffer at the picking query location */
+        /** 拾取查询位置处深度缓冲区的值 */
         public float depth;
         /** The fragment coordinate in GL convention at the picking query location */
+        /** 拾取查询位置处GL约定中的片段坐标 */
         @NonNull public float[] fragCoords = new float[3];
     };
 
     /**
      * An interface to implement a custom class to receive results of picking queries.
+     * 实现自定义类以接收拾取查询结果的接口。
      */
     public interface OnPickCallback {
         /**
          * onPick() is called by the specified Handler in {@link View#pick} when the picking query
          * result is available.
+         * 当拾取查询结果可用时，{@link View#pick}中指定的Handler调用onPick()。
          * @param result An instance of {@link PickingQueryResult}.
+         * @param result {@link PickingQueryResult}的实例。
          */
         void onPick(@NonNull PickingQueryResult result);
     }
@@ -1165,15 +1427,24 @@ public class View {
      * Creates a picking query. Multiple queries can be created (e.g.: multi-touch).
      * Picking queries are all executed when {@link Renderer#render} is called on this View.
      * The provided callback is guaranteed to be called at some point in the future.
+     * 创建拾取查询。可以创建多个查询（例如：多点触控）。
+     * 当在此视图上调用{@link Renderer#render}时，所有拾取查询都会执行。
+     * 提供的回调保证在将来的某个时刻被调用。
      *
      * Typically it takes a couple frames to receive the result of a picking query.
+     * 通常需要几帧才能收到拾取查询的结果。
      *
      * @param x        Horizontal coordinate to query in the viewport with origin on the left.
+     * @param x        在视口中查询的水平坐标，原点在左侧。
      * @param y        Vertical coordinate to query on the viewport with origin at the bottom.
+     * @param y        在视口中查询的垂直坐标，原点在底部。
      * @param handler  An {@link java.util.concurrent.Executor Executor}.
      *                 On Android this can also be a {@link android.os.Handler Handler}.
+     * @param handler  一个{@link java.util.concurrent.Executor Executor}。
+     *                 在Android上，这也可以是{@link android.os.Handler Handler}。
      * @param callback User callback executed by <code>handler</code> when the picking query
      *                 result is available.
+     * @param callback 当拾取查询结果可用时由<code>handler</code>执行的用户回调。
      */
     public void pick(int x, int y,
             @Nullable Object handler, @Nullable OnPickCallback callback) {
@@ -1219,9 +1490,14 @@ public class View {
      * Set the value of material global variables. There are up-to four such variable each of
      * type float4. These variables can be read in a user Material with
      * `getMaterialGlobal{0|1|2|3}()`. All variable start with a default value of { 0, 0, 0, 1 }
+     * 设置材质全局变量的值。最多有四个这样的变量，每个都是
+     * float4类型。这些变量可以在用户材质中通过
+     * `getMaterialGlobal{0|1|2|3}()`读取。所有变量都以默认值{ 0, 0, 0, 1 }开始
      *
      * @param index index of the variable to set between 0 and 3.
+     * @param index 要设置的变量的索引，介于0和3之间。
      * @param value new value for the variable.
+     * @param value 变量的新值。
      * @see #getMaterialGlobal
      */
     public void setMaterialGlobal(int index, @NonNull @Size(min = 4) float[] value) {
@@ -1232,11 +1508,16 @@ public class View {
     /**
      * Get the value of the material global variables.
      * All variable start with a default value of { 0, 0, 0, 1 }
+     * 获取材质全局变量的值。
+     * 所有变量都以默认值{ 0, 0, 0, 1 }开始
      *
      * @param index index of the variable to set between 0 and 3.
+     * @param index 要设置的变量的索引，介于0和3之间。
      * @param out A 4-float array where the value will be stored, or null in which case the array is
      *            allocated.
+     * @param out 存储值的4个浮点数组，或null，在这种情况下分配数组。
      * @return A 4-float array containing the current value of the variable.
+     * @return 包含变量当前值的4个浮点数组。
      * @see #setMaterialGlobal
      */
     @NonNull @Size(min = 4)
@@ -1252,8 +1533,14 @@ public class View {
      *
      * It is for example possible to create a TransformManager component with this
      * Entity and apply a transformation globally on the fog.
+     * 获取表示大规模雾对象的实体。
+     * 此实体始终由视图的场景继承。
+     *
+     * 例如，可以使用此实体创建TransformManager组件，
+     * 并在雾上全局应用变换。
      *
      * @return an Entity representing the large scale fog object.
+     * @return 表示大规模雾对象的实体。
      */
     @Entity
     public int getFogEntity() {
@@ -1267,6 +1554,11 @@ public class View {
      * this method. Similarly, if the whole content of the screen change, like when a cut-scene
      * starts, clearing the history might be needed to avoid artifacts due to the previous frame
      * being very different.
+     * 当使用某些时间特性（例如：TAA或屏幕空间反射）时，视图会保留
+     * 与上次使用视图的渲染器相关联的先前帧渲染历史。
+     * 当切换渲染器时，可能需要通过调用此方法来清除该历史。
+     * 同样，如果整个屏幕内容发生变化，比如过场动画开始时，
+     * 可能需要清除历史以避免由于前一帧差异很大而产生的伪影。
      */
     public void clearFrameHistory(Engine engine) {
         nClearFrameHistory(getNativeObject(), engine.getNativeObject());
@@ -1341,6 +1633,9 @@ public class View {
      * List of available ambient occlusion techniques.
      * @deprecated use setAmbientOcclusionOptions instead
      * @see #setAmbientOcclusion
+     * 可用环境光遮蔽技术列表。
+     * @deprecated 请使用setAmbientOcclusionOptions代替
+     * @see #setAmbientOcclusion
      */
     @Deprecated
     public enum AmbientOcclusion {
@@ -1352,6 +1647,7 @@ public class View {
 
     /**
      * Generic quality level.
+     * 通用质量级别。
      */
     public enum QualityLevel {
         LOW,
@@ -1392,6 +1688,28 @@ public class View {
      * Dynamic resolution is only supported on platforms where the time to render
      * a frame can be measured accurately. Dynamic resolution is currently only
      * supported on Android.
+     * 动态分辨率可用于通过降低视图分辨率来达到所需的目标帧率，
+     * 或在渲染速度快于目标帧率时提高质量。
+     *
+     * 此结构可用于指定降低视图分辨率时使用的最小缩放因子，
+     * 以及提高分辨率进行高质量渲染时使用的最大缩放因子。
+     * 缩放因子可以在X和Y轴上独立控制。默认情况下，所有缩放因子都设置为1.0。
+     *
+     * enabled:   启用或禁用视图上的动态分辨率
+     *
+     * homogeneousScaling: 默认情况下，系统首先缩放主轴。将此设置为true
+     *                     以强制均匀缩放。
+     *
+     * minScale:  此视图应使用的X和Y的最小缩放
+     *
+     * maxScale:  此视图应使用的X和Y的最大缩放
+     *
+     * quality:   上采样质量。
+     *            LOW: 1个双线性采样，Medium: 4个双线性采样，High: 9个双线性采样（帐篷）
+     *
+     * \note
+     * 动态分辨率仅在可以准确测量渲染帧时间的平台上受支持。
+     * 动态分辨率目前仅在Android上受支持。
      *
      * @see Renderer::FrameRateOptions
      *
@@ -1399,22 +1717,27 @@ public class View {
     public static class DynamicResolutionOptions {
         /**
          * minimum scale factors in x and y
+         * x和y的最小缩放因子
          */
         public float minScale = 0.5f;
         /**
          * maximum scale factors in x and y
+         * x和y的最大缩放因子
          */
         public float maxScale = 1.0f;
         /**
          * sharpness when QualityLevel::MEDIUM or higher is used [0 (disabled), 1 (sharpest)]
+         * 当使用QualityLevel::MEDIUM或更高级别时的锐度 [0（禁用），1（最锐利）]
          */
         public float sharpness = 0.9f;
         /**
          * enable or disable dynamic resolution
+         * 启用或禁用动态分辨率
          */
         public boolean enabled = false;
         /**
          * set to true to force homogeneous scaling
+         * 设置为true以强制均匀缩放
          */
         public boolean homogeneousScaling = false;
         /**
@@ -1426,6 +1749,14 @@ public class View {
          *      FSR1 and SGSR require a well anti-aliased (MSAA or TAA), noise free scene. Avoid FXAA and dithering.
          *
          * The default upscaling quality is set to LOW.
+         * 上采样质量
+         * LOW:    双线性过滤传输。最快，质量差
+         * MEDIUM: 高通骁龙游戏超分辨率（SGSR）1.0
+         * HIGH:   AMD FidelityFX FSR1 移动优化版
+         * ULTRA:  AMD FidelityFX FSR1
+         *      FSR1和SGSR需要良好的抗锯齿（MSAA或TAA）、无噪声场景。避免FXAA和抖动。
+         *
+         * 默认上采样质量设置为LOW。
          */
         @NonNull
         public QualityLevel quality = QualityLevel.LOW;
@@ -1460,6 +1791,29 @@ public class View {
      *              enabled for the dirt effect to work properly.
      *
      * dirtStrength: Strength of the dirt texture.
+     * 控制泛光效果的选项
+     *
+     * enabled:     启用或禁用泛光后处理效果。默认禁用。
+     *
+     * levels:      实现模糊效果的连续模糊次数，最小值为3，最大值为12。
+     *              此值与分辨率一起影响模糊效果的扩散。
+     *              此值可能会被静默减少以适应原始图像大小。
+     *
+     * resolution:  泛光次轴的分辨率。最小值为2^levels，
+     *              最大值为原始分辨率和4096中的较小值。此参数被静默钳制到最小值和最大值。
+     *              强烈建议此值小于应用动态分辨率后的目标分辨率（水平和垂直）。
+     *
+     * strength:    添加到原始图像的泛光量。介于0和1之间。
+     *
+     * blendMode:   泛光效果是纯加性的（false）还是与原始图像混合的（true）。
+     *
+     * threshold:   启用时，在源图像上应用1.0的阈值，这对于艺术原因很有用，
+     *              通常在使用污垢纹理时需要。
+     *
+     * dirt:        污垢/划痕/污迹纹理（可以是RGB），添加到泛光效果中。
+     *              污迹在泛光发生的地方可见。必须启用阈值才能使污垢效果正常工作。
+     *
+     * dirtStrength: 污垢纹理的强度。
      */
     public static class BloomOptions {
         public enum BlendMode {
@@ -1544,28 +1898,34 @@ public class View {
         public float ghostSpacing = 0.6f;
         /**
          * hdr threshold for the ghosts
+         * 鬼影的HDR阈值
          */
         public float ghostThreshold = 10.0f;
         /**
          * thickness of halo in vertical screen units, 0 to disable
+         * 光晕在垂直屏幕单位中的厚度，0表示禁用
          */
         public float haloThickness = 0.1f;
         /**
          * radius of halo in vertical screen units [0, 0.5]
+         * 光晕在垂直屏幕单位中的半径 [0, 0.5]
          */
         public float haloRadius = 0.4f;
         /**
          * hdr threshold for the halo
+         * 光晕的HDR阈值
          */
         public float haloThreshold = 10.0f;
     }
 
     /**
      * Options to control large-scale fog in the scene
+     * 控制场景中大规模雾的选项
      */
     public static class FogOptions {
         /**
          * Distance in world units [m] from the camera to where the fog starts ( >= 0.0 )
+         * 从相机到雾开始位置的世界单位距离[m]（>= 0.0）
          */
         public float distance = 0.0f;
         /**
@@ -1575,14 +1935,21 @@ public class View {
          *
          * Note: The SkyBox is typically at a distance of 1e19 in world space (depending on the near
          * plane distance and projection used though).
+         * 禁用雾计算后的世界单位距离[m]。
+         * 这可用于排除天空盒，如果天空盒已包含云或雾，这是理想的。
+         * 默认值为+无穷大，将雾应用于所有内容。
+         *
+         * 注意：天空盒通常在世界空间中距离为1e19（尽管取决于使用的近平面距离和投影）。
          */
         public float cutOffDistance = Float.POSITIVE_INFINITY;
         /**
          * fog's maximum opacity between 0 and 1
+         * 雾的最大不透明度，介于0和1之间
          */
         public float maximumOpacity = 1.0f;
         /**
          * Fog's floor in world units [m]. This sets the "sea level".
+         * 雾的底部世界单位[m]。这设置了"海平面"。
          */
         public float height = 0.0f;
         /**

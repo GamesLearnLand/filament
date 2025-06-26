@@ -22,3 +22,6 @@ include ':samples:sample-image-based-lighting'
 rootProject.name = 'filament'
 include ':samples:sample-3d-editor'
 include ':samples:library'
+
+include ':third_party'
+project(':third_party').projectDir = file('../third_party')
