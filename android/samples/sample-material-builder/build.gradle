@@ -52,6 +52,7 @@ android {
 
 dependencies {
     implementation deps.kotlin
-    implementation project(':filament-android')
-    implementation project(':filamat-android')
+//    implementation project(':filament-android')
+//    implementation project(':filamat-android')
+    api project(path: ':samples:library')
 }

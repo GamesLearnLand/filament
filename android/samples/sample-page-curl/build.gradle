@@ -50,6 +50,7 @@ android {
 }
 
 dependencies {
-    implementation project(':filament-android')
+//    implementation project(':filament-android')
     implementation deps.androidx.annotations
+    api project(path: ':samples:library')
 }

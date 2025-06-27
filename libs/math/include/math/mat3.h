@@ -304,13 +304,27 @@ public:
     static TMat33 lookTo(const TVec3<A>& direction, const TVec3<B>& up) noexcept;
 
     /**
-     * Packs the tangent frame represented by the specified matrix into a quaternion.
-     * Reflection is preserved by encoding it as the sign of the w component in the
-     * resulting quaternion. Since -0 cannot always be represented on the GPU, this
-     * function computes a bias to ensure values are always either positive or negative,
-     * never 0. The bias is computed based on the specified storageSize, which defaults
-     * to 2 bytes, making the resulting quaternion suitable for storage into an SNORM16
-     * vector.
+     * 将切线空间矩阵打包为四元数，保留反射信息并优化存储精度。
+     *
+     * 该函数将3x3切线空间矩阵转换为四元数，通过编码反射信息到四元数w分量的符号位，
+     * 并计算适当的偏差值确保w分量非零。适用于需要压缩存储法线变换矩阵的场景。
+     *
+     * @param m          待转换的3x3切线空间矩阵，需满足正交性要求
+     * @param storageSize 存储目标的字节大小（默认为sizeof(int16_t)即2字节）
+     *                    影响偏差计算的位数精度，取值通常为1(8位)、2(16位)或4(32位)
+     * @return           包含变换信息的四元数，需归一化使用
+     *
+     * 实现细节：
+     * 1. 转换矩阵到四元数基础表示
+     * 2. 计算基于storageSize的精度补偿因子：
+     *    bias = 1/(2^(bit_depth-1)-1)，确保w≠0
+     * 3. 通过(n × t)·b判断是否存在反射，设置四元数符号
+     * 4. 返回前应用标准化处理
+     *
+     * 典型应用场景：
+     * - 法线贴图压缩（如OpenGL的SNORM16格式）
+     * - 动画骨骼变换压缩
+     * - GPU只读数据存储优化
      */
     static constexpr TQuaternion<T> packTangentFrame(
             const TMat33& m, size_t storageSize = sizeof(int16_t)) noexcept;
@@ -444,24 +458,52 @@ TMat33<T> TMat33<T>::lookTo(const TVec3<A>& direction, const TVec3<B>& up) noexc
 }
 
 //------------------------------------------------------------------------------
+
+
+/**
+ * 将切线空间矩阵打包为四元数，保留反射信息并优化存储精度。
+ *
+ * 该函数将3x3切线空间矩阵转换为四元数，通过编码反射信息到四元数w分量的符号位，
+ * 并计算适当的偏差值确保w分量非零。适用于需要压缩存储法线变换矩阵的场景。
+ *
+ * @param m          待转换的3x3切线空间矩阵，需满足正交性要求
+ * @param storageSize 存储目标的字节大小（默认为sizeof(int16_t)即2字节）
+ *                    影响偏差计算的位数精度，取值通常为1(8位)、2(16位)或4(32位)
+ * @return           包含变换信息的四元数，需归一化使用
+ *
+ * 实现细节：
+ * 1. 转换矩阵到四元数基础表示
+ * 2. 计算基于storageSize的精度补偿因子：
+ *    bias = 1/(2^(bit_depth-1)-1)，确保w≠0
+ * 3. 通过(n × t)·b判断是否存在反射，设置四元数符号
+ * 4. 返回前应用标准化处理
+ *
+ * 典型应用场景：
+ * - 法线贴图压缩（如OpenGL的SNORM16格式）
+ * - 动画骨骼变换压缩
+ * - GPU只读数据存储优化
+ */
 template<typename T>
 constexpr TQuaternion<T> TMat33<T>::packTangentFrame(const TMat33<T>& m, size_t storageSize) noexcept {
+    // 1. 基础四元数转换（保持矩阵的前/后向列）
     TQuaternion<T> q = TMat33<T>{ m[0], cross(m[2], m[0]), m[2] }.toQuaternion();
+    // 2. 正则化处理确保单位长度
     q = positive(normalize(q));
 
-    // Ensure w is never 0.0
-    // Bias is 2^(nb_bits - 1) - 1
+    // 3. 精度补偿处理（防止w分量为0）
+    // 计算位深度对应的补偿因子：2^(bit_depth-1)-1
     const T bias = T(1.0) / T((1 << (storageSize * CHAR_BIT - 1)) - 1);
     if (q.w < bias) {
+        // 设置最小w值并重新缩放xyz分量
         q.w = bias;
-
         const T factor = (T)(std::sqrt(1.0 - (double)bias * (double)bias));
         q.xyz *= factor;
     }
 
-    // If there's a reflection ((n x t) . b <= 0), make sure w is negative
+    // 4. 反射检测与符号处理
+    // 通过双垂直乘积判断反射状态：(n × t) · b ≤ 0
     if (dot(cross(m[0], m[2]), m[1]) < T(0)) {
-        q = -q;
+        q = -q;  // 反射时反转四元数符号
     }
 
     return q;
