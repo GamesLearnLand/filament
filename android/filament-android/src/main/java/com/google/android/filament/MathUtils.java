@@ -24,27 +24,24 @@ public final class MathUtils {
     private MathUtils() { }
 
     /**
-     * Packs the tangent frame represented by the specified tangent, bitangent, and normal into a
-     * quaternion.
+     * 将由指定的切线、副法线和法线表示的切空间框架打包到四元数中。
      *
      * <p>
-     * Reflection is preserved by encoding it as the sign of the w component in the resulting
-     * quaternion. Since -0 cannot always be represented on the GPU, this function computes a bias
-     * to ensure values are always either positive or negative, never 0. The bias is computed based
-     * on a per-element storage size of 2 bytes, making the resulting quaternion suitable for
-     * storage into an SNORM16 vector.
+     * 反射通过将反射编码为结果四元数的w分量的符号来保留。由于GPU上不能总是表示-0，
+     * 此函数计算一个偏置值，以确保值始终为正或负，而不是0。该偏置值基于每个元素存储大小为2字节进行计算，
+     * 使得生成的四元数适合存储到SNORM16向量中。
      * </p>
      *
-     * @param tangentX   the X component of the tangent
-     * @param tangentY   the Y component of the tangent
-     * @param tangentZ   the Z component of the tangent
-     * @param bitangentX the X component of the bitangent
-     * @param bitangentY the Y component of the bitangent
-     * @param bitangentZ the Z component of the bitangent
-     * @param normalX    the X component of the normal
-     * @param normalY    the Y component of the normal
-     * @param normalZ    the Z component of the normal
-     * @param quaternion a float array of at least size 4 for the quaternion result to be stored
+     * @param tangentX   切线的X分量
+     * @param tangentY   切线的Y分量
+     * @param tangentZ   切线的Z分量
+     * @param bitangentX 副法线的X分量
+     * @param bitangentY 副法线的Y分量
+     * @param bitangentZ 副法线的Z分量
+     * @param normalX    法线的X分量
+     * @param normalY    法线的Y分量
+     * @param normalZ    法线的Z分量
+     * @param quaternion 用于存储四元数结果的float数组，至少需要4个元素
      */
     public static void packTangentFrame(
             float tangentX, float tangentY, float tangentZ,
@@ -58,28 +55,25 @@ public final class MathUtils {
     }
 
     /**
-     * Packs the tangent frame represented by the specified tangent, bitangent, and normal into a
-     * quaternion.
+     * 将由指定的切线、副法线和法线表示的切空间框架打包到四元数中。
      *
      * <p>
-     * Reflection is preserved by encoding it as the sign of the w component in the resulting
-     * quaternion. Since -0 cannot always be represented on the GPU, this function computes a bias
-     * to ensure values are always either positive or negative, never 0. The bias is computed based
-     * on a per-element storage size of 2 bytes, making the resulting quaternion suitable for
-     * storage into an SNORM16 vector.
+     * 反射通过将反射编码为结果四元数的w分量的符号来保留。由于GPU上不能总是表示-0，
+     * 此函数计算一个偏置值，以确保值始终为正或负，而不是0。该偏置值基于每个元素存储大小为2字节进行计算，
+     * 使得生成的四元数适合存储到SNORM16向量中。
      * </p>
      *
-     * @param tangentX   the X component of the tangent
-     * @param tangentY   the Y component of the tangent
-     * @param tangentZ   the Z component of the tangent
-     * @param bitangentX the X component of the bitangent
-     * @param bitangentY the Y component of the bitangent
-     * @param bitangentZ the Z component of the bitangent
-     * @param normalX    the X component of the normal
-     * @param normalY    the Y component of the normal
-     * @param normalZ    the Z component of the normal
-     * @param quaternion a float array of at least size 4 for the quaternion result to be stored
-     * @param offset     offset, in elements, into the quaternion array to store the results
+     * @param tangentX   切线的X分量
+     * @param tangentY   切线的Y分量
+     * @param tangentZ   切线的Z分量
+     * @param bitangentX 副法线的X分量
+     * @param bitangentY 副法线的Y分量
+     * @param bitangentZ 副法线的Z分量
+     * @param normalX    法线的X分量
+     * @param normalY    法线的Y分量
+     * @param normalZ    法线的Z分量
+     * @param quaternion 用于存储四元数结果的float数组，至少需要4个元素
+     * @param offset     四元数数组中存储结果的偏移量（以元素为单位）
      */
     public static void packTangentFrame(
             float tangentX, float tangentY, float tangentZ,

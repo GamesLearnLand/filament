@@ -1,33 +1,60 @@
-// Simple unlit material that uses the colors associated with each vertex.
+// Filament 无光照材质定义文件
+// 这是一个简单的无光照(unlit)材质，使用与每个顶点关联的颜色进行渲染。
+// 
+// 无光照材质特点：
+// - 不受光源影响，直接显示顶点或纹理颜色
+// - 适用于UI元素、粒子效果、天空盒等不需要光照的场景
+// - 性能开销较小，因为跳过了复杂的光照计算
 //
-// This source material must be compiled to a binary material using the matc tool.
-// The command used to compile this material is:
+// 此源材质文件必须使用matc工具编译为二进制材质包：
 // matc -p mobile -a opengl -o app/src/main/assets/baked_color.filamat app/src/materials/baked_color.mat
 //
-// See build.gradle for an example of how to compile materials automatically
-// Please refer to the documentation for more information about matc and the materials system.
+// 参考build.gradle了解如何自动编译材质的示例
+// 更多关于matc和材质系统的信息请参考官方文档
 
 material {
+    // 材质名称，用于在运行时识别和引用此材质
     name : baked_color,
 
-    // Lists the required vertex attributes
-    // Here we only need a color (RGBA)
+    // 声明此材质所需的顶点属性列表
+    // 这里只需要颜色属性(RGBA)，用于存储每个顶点的颜色信息
+    // color属性通常在顶点缓冲区中以float4格式提供
     requires : [
         color
     ],
 
-    // This material disables all lighting
+    // 着色模型：使用unlit模型禁用所有光照计算
+    // unlit模型特点：
+    // - 不进行任何光照计算，直接输出材质颜色
+    // - 忽略场景中的光源、阴影和环境光
+    // - 适合不需要光照效果的对象渲染
     shadingModel : unlit,
+    
+    // 功能级别：设置为0表示使用最基本的功能集
+    // 较低的功能级别可以在低端设备上获得更好的性能
     featureLevel : 0
 }
 
+// Fragment Shader 片段着色器部分
+// 定义材质在每个像素上的具体行为
 fragment {
+    // material函数：Filament材质系统的核心函数
+    // 参数：MaterialInputs material - 输入输出的材质属性结构体
+    // 此函数在每个像素的渲染过程中被调用，用于设置该像素的材质属性
     void material(inout MaterialInputs material) {
-        // You must always call the prepareMaterial() function
+        // prepareMaterial：初始化材质输入结构体
+        // 这是必需的第一步，设置默认值并准备材质属性
         prepareMaterial(material);
 
-        // We set the material's color to the color interpolated from
-        // the model's vertices
+        // 设置材质的基础颜色为从模型顶点插值得到的颜色
+        // getColor()函数：
+        // - 获取当前片段(像素)的插值颜色
+        // - 颜色值是通过GPU在三角形内部对顶点颜色进行线性插值计算得出
+        // - 返回的是经过透视校正插值的RGBA颜色值
+        // - 这样每个像素都会显示平滑过渡的颜色，创建渐变效果
         material.baseColor = getColor();
+        
+        // 注意：由于使用unlit模型，这里设置的baseColor就是最终显示的颜色
+        // 不会受到任何光照、阴影或环境光的影响
     }
 }

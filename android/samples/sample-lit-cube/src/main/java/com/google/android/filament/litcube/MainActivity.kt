@@ -25,27 +25,47 @@
 package com.google.android.filament.litcube
 
 // Android 动画相关导入
-import android.animation.ValueAnimator          // 值动画器，用于创建动画效果
-import android.app.Activity                    // Android Activity基类
-import android.opengl.Matrix                   // OpenGL矩阵操作工具类
-import android.os.Bundle                       // Activity状态保存和恢复
-import android.view.Choreographer              // 帧同步调度器，用于协调动画和绘制
-import android.view.Surface                    // 原生Surface对象
-import android.view.SurfaceView                // 用于渲染的Surface视图
-import android.view.animation.LinearInterpolator // 线性插值器
 
 // Filament 3D渲染引擎相关导入
-import com.google.android.filament.*           // Filament核心类
-import com.google.android.filament.RenderableManager.* // 可渲染对象管理器
-import com.google.android.filament.VertexBuffer.*      // 顶点缓冲区
-import com.google.android.filament.android.DisplayHelper // 显示辅助类
-import com.google.android.filament.android.FilamentHelper // Filament辅助工具
-import com.google.android.filament.android.UiHelper      // UI辅助类，管理Surface生命周期
 
 // Java NIO 相关导入，用于高效的内存操作
-import java.nio.ByteBuffer                     // 字节缓冲区
-import java.nio.ByteOrder                      // 字节序
-import java.nio.channels.Channels              // NIO通道工具
+import android.animation.ValueAnimator
+import android.app.Activity
+import android.opengl.Matrix
+import android.os.Bundle
+import android.view.Choreographer
+import android.view.Surface
+import android.view.SurfaceView
+import android.view.animation.LinearInterpolator
+import com.google.android.filament.Box
+import com.google.android.filament.Camera
+import com.google.android.filament.Colors
+import com.google.android.filament.Engine
+import com.google.android.filament.Entity
+import com.google.android.filament.EntityManager
+import com.google.android.filament.Filament
+import com.google.android.filament.IndexBuffer
+import com.google.android.filament.LightManager
+import com.google.android.filament.Material
+import com.google.android.filament.MaterialInstance
+import com.google.android.filament.MathUtils
+import com.google.android.filament.RenderableManager
+import com.google.android.filament.RenderableManager.PrimitiveType
+import com.google.android.filament.Renderer
+import com.google.android.filament.Scene
+import com.google.android.filament.Skybox
+import com.google.android.filament.SwapChain
+import com.google.android.filament.VertexBuffer
+import com.google.android.filament.VertexBuffer.AttributeType
+import com.google.android.filament.VertexBuffer.VertexAttribute
+import com.google.android.filament.View
+import com.google.android.filament.Viewport
+import com.google.android.filament.android.DisplayHelper
+import com.google.android.filament.android.FilamentHelper
+import com.google.android.filament.android.UiHelper
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.channels.Channels
 
 /**
  * MainActivity - Filament 光照立方体示例的主Activity
@@ -58,74 +78,128 @@ class MainActivity : Activity() {
     // 这会加载大多数API调用所需的JNI库
     companion object {
         init {
-            Filament.init()  // 初始化Filament渲染引擎
+            // 初始化Filament渲染引擎
+            Filament.init()
         }
     }
 
     // === UI和显示相关组件 ===
-    // The View we want to render into
-    // 我们要渲染到的视图
+
+    /**
+     * The View we want to render into
+     * 我们要渲染到的视图
+     */
     private lateinit var surfaceView: SurfaceView
-    // UiHelper is provided by Filament to manage SurfaceView and SurfaceTexture
-    // UiHelper由Filament提供，用于管理SurfaceView和SurfaceTexture的生命周期
+
+    /**
+     * UiHelper is provided by Filament to manage SurfaceView and SurfaceTexture
+     * UiHelper由Filament提供，用于管理SurfaceView和SurfaceTexture的生命周期
+     */
     private lateinit var uiHelper: UiHelper
-    // DisplayHelper is provided by Filament to manage the display
-    // DisplayHelper由Filament提供，用于管理显示器相关功能（如HDR、刷新率等）
+
+    /**
+     * DisplayHelper is provided by Filament to manage the display
+     * DisplayHelper由Filament提供，用于管理显示器相关功能（如HDR、刷新率等）
+     */
     private lateinit var displayHelper: DisplayHelper
-    // Choreographer is used to schedule new frames
-    // Choreographer用于调度新帧，确保渲染与显示器刷新率同步
+
+    /**
+     * Choreographer is used to schedule new frames
+     * Choreographer用于调度新帧，确保渲染与显示器刷新率同步
+     */
     private lateinit var choreographer: Choreographer
 
     // === Filament核心渲染组件 ===
-    // Engine creates and destroys Filament resources
-    // Engine创建和销毁Filament资源
-    // Each engine must be accessed from a single thread of your choosing
-    // 每个引擎实例必须从单一线程访问（由您选择的线程）
-    // Resources cannot be shared across engines
-    // 资源不能在不同的引擎实例之间共享
+
+    /**
+     * Engine creates and destroys Filament resources
+     * Engine创建和销毁Filament资源
+     * Each engine must be accessed from a single thread of your choosing
+     * 每个引擎实例必须从单一线程访问（由您选择的线程）
+     * Resources cannot be shared across engines
+     * 资源不能在不同的引擎实例之间共享
+     */
     private lateinit var engine: Engine
-    // A renderer instance is tied to a single surface (SurfaceView, TextureView, etc.)
-    // 一个渲染器实例绑定到单个表面（SurfaceView、TextureView等）
+
+    /**
+     * A renderer instance is tied to a single surface (SurfaceView, TextureView, etc.)
+     * 一个渲染器实例绑定到单个表面（SurfaceView、TextureView等）
+     */
     private lateinit var renderer: Renderer
-    // A scene holds all the renderable, lights, etc. to be drawn
-    // 场景包含所有要绘制的可渲染对象、灯光等
+
+    /**
+     * A scene holds all the renderable, lights, etc. to be drawn
+     * 场景包含所有要绘制的可渲染对象、灯光等
+     */
     private lateinit var scene: Scene
-    // A view defines a viewport, a scene and a camera for rendering
-    // 视图定义了用于渲染的视口、场景和相机
+
+    /**
+     * A view defines a viewport, a scene and a camera for rendering
+     * 视图定义了用于渲染的视口、场景和相机
+     */
     private lateinit var view: View
-    // Should be pretty obvious :)
-    // 相机（这个应该很明显 :)）
-    // 用于定义观察者在3D空间中的位置和视角
+
+    /**
+     * Should be pretty obvious :)
+     * 相机（这个应该很明显 :)）
+     * 用于定义观察者在3D空间中的位置和视角
+     */
     private lateinit var camera: Camera
 
     // === 材质和几何数据 ===
-    // 材质定义了物体表面的视觉属性（如颜色、粗糙度、金属度等）
+
+    /**
+     * 材质定义了物体表面的视觉属性（如颜色、粗糙度、金属度等）
+     */
     private lateinit var material: Material
-    // 材质实例允许为同一材质设置不同的参数值
+
+    /**
+     * 材质实例允许为同一材质设置不同的参数值
+     */
     private lateinit var materialInstance: MaterialInstance
-    // 顶点缓冲区存储几何体的顶点数据（位置、法线、切线等）
+
+    /**
+     * 顶点缓冲区存储几何体的顶点数据（位置、法线、切线等）
+     */
     private lateinit var vertexBuffer: VertexBuffer
-    // 索引缓冲区定义如何连接顶点形成三角形
+
+    /**
+     * 索引缓冲区定义如何连接顶点形成三角形
+     */
     private lateinit var indexBuffer: IndexBuffer
 
     // === Filament实体系统 ===
-    // Filament entity representing a renderable object
-    // Filament实体，代表一个可渲染对象（立方体）
-    @Entity private var renderable = 0
-    // 光源实体，为场景提供照明
-    @Entity private var light = 0
+
+    /**
+     * Filament entity representing a renderable object
+     * Filament实体，代表一个可渲染对象（立方体）
+     */
+    @Entity
+    private var renderable = 0
+
+    /**
+     * 光源实体，为场景提供照明
+     */
+    @Entity
+    private var light = 0
 
     // === 渲染管道组件 ===
-    // A swap chain is Filament's representation of a surface
-    // 交换链是Filament对表面的表示，用于双缓冲渲染
+    /**
+     * A swap chain is Filament's representation of a surface
+     * 交换链是Filament对表面的表示，用于双缓冲渲染
+     */
     private var swapChain: SwapChain? = null
 
-    // Performs the rendering and schedules new frames
-    // 执行渲染并调度新帧的回调
+    /**
+     * Performs the rendering and schedules new frames
+     * 执行渲染并调度新帧的回调
+     */
     private val frameScheduler = FrameCallback()
 
     // === 动画系统 ===
-    // 值动画器，用于创建0到360度的旋转动画
+    /**
+     * 值动画器，用于创建0到360度的旋转动画
+     */
     private val animator = ValueAnimator.ofFloat(0.0f, 360.0f)
 
     /**
@@ -230,12 +304,14 @@ class MainActivity : Activity() {
         // 获取实体的变换管理器实例
         val ti = engine.transformManager.getInstance(renderable)
         // 设置变换矩阵（单位矩阵，表示无变换）
-        engine.transformManager.setTransform(ti, floatArrayOf(
+        engine.transformManager.setTransform(
+            ti, floatArrayOf(
                 1.0f, 0.0f, 0.0f, 0.0f,  // 第一行：X轴方向
                 0.0f, 1.0f, 0.0f, 0.0f,  // 第二行：Y轴方向
                 0.0f, 0.0f, 1.0f, 0.0f,  // 第三行：Z轴方向
                 0.0f, 0.0f, 0.0f, 1.0f   // 第四行：平移和齐次坐标
-        ))
+            )
+        )
 
         // We then create a renderable component on that entity
         // 然后在该实体上创建可渲染组件
@@ -248,19 +324,19 @@ class MainActivity : Activity() {
         // instance, setup with different parameters
         // 实例，设置不同的参数
         RenderableManager.Builder(1)
-                // Overall bounding box of the renderable
-                // 可渲染对象的整体包围盒
-                .boundingBox(Box(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f))
-                // Sets the mesh data of the first primitive, 6 faces of 6 indices each
-                // 设置第一个图元的网格数据，6个面，每个面6个索引
-                .geometry(0, PrimitiveType.TRIANGLES, vertexBuffer, indexBuffer, 0, 6 * 6)
-                // Sets the material of the first primitive
-                // 设置第一个图元的材质
-                .material(0, materialInstance)
-                .culling(false)      // 禁用背面剔除
-                .receiveShadows(false)  // 不接收阴影
-                .castShadows(false)     // 不投射阴影
-                .build(engine, renderable)
+            // Overall bounding box of the renderable
+            // 可渲染对象的整体包围盒
+            .boundingBox(Box(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f))
+            // Sets the mesh data of the first primitive, 6 faces of 6 indices each
+            // 设置第一个图元的网格数据，6个面，每个面6个索引
+            .geometry(0, PrimitiveType.TRIANGLES, vertexBuffer, indexBuffer, 0, 6 * 6)
+            // Sets the material of the first primitive
+            // 设置第一个图元的材质
+            .material(0, materialInstance)
+            .culling(false)      // 禁用背面剔除
+            .receiveShadows(false)  // 不接收阴影
+            .castShadows(false)     // 不投射阴影
+            .build(engine, renderable)
 
         // Add the entity to the scene to render it
         // 将实体添加到场景中以渲染它
@@ -275,17 +351,17 @@ class MainActivity : Activity() {
         // 从色温（5,500K）创建颜色，模拟日光的颜色
         val (r, g, b) = Colors.cct(5_500.0f)
         LightManager.Builder(LightManager.Type.DIRECTIONAL)
-                // 设置光源颜色为日光色温
-                .color(r, g, b)
-                // Intensity of the sun in lux on a clear day
-                // 晴天太阳的光照强度（以勒克斯为单位）
-                .intensity(110_000.0f)
-                // The direction is normalized on our behalf
-                // 光照方向（会自动归一化）
-                .direction(0.0f, -0.5f, -1.0f)
-                // 启用阴影投射
-                .castShadows(true)
-                .build(engine, light)
+            // 设置光源颜色为日光色温
+            .color(r, g, b)
+            // Intensity of the sun in lux on a clear day
+            // 晴天太阳的光照强度（以勒克斯为单位）
+            .intensity(110_000.0f)
+            // The direction is normalized on our behalf
+            // 光照方向（会自动归一化）
+            .direction(0.0f, -0.5f, -1.0f)
+            // 启用阴影投射
+            .castShadows(true)
+            .build(engine, light)
 
         // Add the entity to the scene to light it
         // 将光源实体添加到场景中以照亮场景
@@ -365,6 +441,7 @@ class MainActivity : Activity() {
         // 定义顶点数据类和将顶点写入ByteBuffer的扩展函数
         @Suppress("ArrayInDataClass")
         data class Vertex(val x: Float, val y: Float, val z: Float, val tangents: FloatArray)
+
         fun ByteBuffer.put(v: Vertex): ByteBuffer {
             putFloat(v.x)       // 写入X坐标
             putFloat(v.y)       // 写入Y坐标
@@ -389,68 +466,134 @@ class MainActivity : Activity() {
 
         // 为每个面计算切线空间（法线、切线、副切线）
         // 参数：法线向量(3个)，切线向量(3个)，副切线向量(3个)，输出数组
-        MathUtils.packTangentFrame( 0.0f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f,  1.0f,  0.0f,  0.0f, tfPX)  // +X面
-        MathUtils.packTangentFrame( 0.0f,  1.0f, 0.0f, 0.0f, 0.0f, -1.0f, -1.0f,  0.0f,  0.0f, tfNX)  // -X面
-        MathUtils.packTangentFrame(-1.0f,  0.0f, 0.0f, 0.0f, 0.0f, -1.0f,  0.0f,  1.0f,  0.0f, tfPY)  // +Y面
-        MathUtils.packTangentFrame(-1.0f,  0.0f, 0.0f, 0.0f, 0.0f,  1.0f,  0.0f, -1.0f,  0.0f, tfNY)  // -Y面
-        MathUtils.packTangentFrame( 0.0f,  1.0f, 0.0f, 1.0f, 0.0f,  0.0f,  0.0f,  0.0f,  1.0f, tfPZ)  // +Z面
-        MathUtils.packTangentFrame( 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,  0.0f,  0.0f,  0.0f, -1.0f, tfNZ)  // -Z面
+        MathUtils.packTangentFrame(
+            0.0f,
+            1.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            -1.0f,
+            1.0f,
+            0.0f,
+            0.0f,
+            tfPX
+        )  // +X面
+        MathUtils.packTangentFrame(
+            0.0f,
+            1.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            -1.0f,
+            -1.0f,
+            0.0f,
+            0.0f,
+            tfNX
+        )  // -X面
+        MathUtils.packTangentFrame(
+            -1.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            -1.0f,
+            0.0f,
+            1.0f,
+            0.0f,
+            tfPY
+        )  // +Y面
+        MathUtils.packTangentFrame(
+            -1.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            1.0f,
+            0.0f,
+            -1.0f,
+            0.0f,
+            tfNY
+        )  // -Y面
+        MathUtils.packTangentFrame(
+            0.0f,
+            1.0f,
+            0.0f,
+            1.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            1.0f,
+            tfPZ
+        )  // +Z面
+        MathUtils.packTangentFrame(
+            0.0f,
+            -1.0f,
+            0.0f,
+            1.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            0.0f,
+            -1.0f,
+            tfNZ
+        )  // -Z面
 
         // === 创建顶点数据 ===
         val vertexData = ByteBuffer.allocate(vertexCount * vertexSize)
-                // It is important to respect the native byte order
-                // 重要：必须遵循本机字节序以确保数据正确性
-                .order(ByteOrder.nativeOrder())
-                // Face -Z (背面，朝向-Z方向)
-                .put(Vertex(-1.0f, -1.0f, -1.0f, tfNZ))  // 左下角
-                .put(Vertex(-1.0f,  1.0f, -1.0f, tfNZ))  // 左上角
-                .put(Vertex( 1.0f,  1.0f, -1.0f, tfNZ))  // 右上角
-                .put(Vertex( 1.0f, -1.0f, -1.0f, tfNZ))  // 右下角
-                // Face +X (右面，朝向+X方向)
-                .put(Vertex( 1.0f, -1.0f, -1.0f, tfPX))  // 左下角
-                .put(Vertex( 1.0f,  1.0f, -1.0f, tfPX))  // 左上角
-                .put(Vertex( 1.0f,  1.0f,  1.0f, tfPX))  // 右上角
-                .put(Vertex( 1.0f, -1.0f,  1.0f, tfPX))  // 右下角
-                // Face +Z (正面，朝向+Z方向)
-                .put(Vertex(-1.0f, -1.0f,  1.0f, tfPZ))  // 左下角
-                .put(Vertex( 1.0f, -1.0f,  1.0f, tfPZ))  // 右下角
-                .put(Vertex( 1.0f,  1.0f,  1.0f, tfPZ))  // 右上角
-                .put(Vertex(-1.0f,  1.0f,  1.0f, tfPZ))  // 左上角
-                // Face -X (左面，朝向-X方向)
-                .put(Vertex(-1.0f, -1.0f,  1.0f, tfNX))  // 左下角
-                .put(Vertex(-1.0f,  1.0f,  1.0f, tfNX))  // 左上角
-                .put(Vertex(-1.0f,  1.0f, -1.0f, tfNX))  // 右上角
-                .put(Vertex(-1.0f, -1.0f, -1.0f, tfNX))  // 右下角
-                // Face -Y (底面，朝向-Y方向)
-                .put(Vertex(-1.0f, -1.0f,  1.0f, tfNY))  // 左下角
-                .put(Vertex(-1.0f, -1.0f, -1.0f, tfNY))  // 左上角
-                .put(Vertex( 1.0f, -1.0f, -1.0f, tfNY))  // 右上角
-                .put(Vertex( 1.0f, -1.0f,  1.0f, tfNY))  // 右下角
-                // Face +Y (顶面，朝向+Y方向)
-                .put(Vertex(-1.0f,  1.0f, -1.0f, tfPY))  // 左下角
-                .put(Vertex(-1.0f,  1.0f,  1.0f, tfPY))  // 左上角
-                .put(Vertex( 1.0f,  1.0f,  1.0f, tfPY))  // 右上角
-                .put(Vertex( 1.0f,  1.0f, -1.0f, tfPY))  // 右下角
-                // Make sure the cursor is pointing in the right place in the byte buffer
-                // 确保游标指向字节缓冲区中的正确位置
-                .flip()
+            // It is important to respect the native byte order
+            // 重要：必须遵循本机字节序以确保数据正确性
+            .order(ByteOrder.nativeOrder())
+            // Face -Z (背面，朝向-Z方向)
+            .put(Vertex(-1.0f, -1.0f, -1.0f, tfNZ))  // 左下角
+            .put(Vertex(-1.0f, 1.0f, -1.0f, tfNZ))  // 左上角
+            .put(Vertex(1.0f, 1.0f, -1.0f, tfNZ))  // 右上角
+            .put(Vertex(1.0f, -1.0f, -1.0f, tfNZ))  // 右下角
+            // Face +X (右面，朝向+X方向)
+            .put(Vertex(1.0f, -1.0f, -1.0f, tfPX))  // 左下角
+            .put(Vertex(1.0f, 1.0f, -1.0f, tfPX))  // 左上角
+            .put(Vertex(1.0f, 1.0f, 1.0f, tfPX))  // 右上角
+            .put(Vertex(1.0f, -1.0f, 1.0f, tfPX))  // 右下角
+            // Face +Z (正面，朝向+Z方向)
+            .put(Vertex(-1.0f, -1.0f, 1.0f, tfPZ))  // 左下角
+            .put(Vertex(1.0f, -1.0f, 1.0f, tfPZ))  // 右下角
+            .put(Vertex(1.0f, 1.0f, 1.0f, tfPZ))  // 右上角
+            .put(Vertex(-1.0f, 1.0f, 1.0f, tfPZ))  // 左上角
+            // Face -X (左面，朝向-X方向)
+            .put(Vertex(-1.0f, -1.0f, 1.0f, tfNX))  // 左下角
+            .put(Vertex(-1.0f, 1.0f, 1.0f, tfNX))  // 左上角
+            .put(Vertex(-1.0f, 1.0f, -1.0f, tfNX))  // 右上角
+            .put(Vertex(-1.0f, -1.0f, -1.0f, tfNX))  // 右下角
+            // Face -Y (底面，朝向-Y方向)
+            .put(Vertex(-1.0f, -1.0f, 1.0f, tfNY))  // 左下角
+            .put(Vertex(-1.0f, -1.0f, -1.0f, tfNY))  // 左上角
+            .put(Vertex(1.0f, -1.0f, -1.0f, tfNY))  // 右上角
+            .put(Vertex(1.0f, -1.0f, 1.0f, tfNY))  // 右下角
+            // Face +Y (顶面，朝向+Y方向)
+            .put(Vertex(-1.0f, 1.0f, -1.0f, tfPY))  // 左下角
+            .put(Vertex(-1.0f, 1.0f, 1.0f, tfPY))  // 左上角
+            .put(Vertex(1.0f, 1.0f, 1.0f, tfPY))  // 右上角
+            .put(Vertex(1.0f, 1.0f, -1.0f, tfPY))  // 右下角
+            // Make sure the cursor is pointing in the right place in the byte buffer
+            // 确保游标指向字节缓冲区中的正确位置
+            .flip()
 
         // === 创建顶点缓冲区 ===
         // Declare the layout of our mesh
         // 声明网格的布局
         vertexBuffer = VertexBuffer.Builder()
-                .bufferCount(1)                // 使用1个缓冲区
-                .vertexCount(vertexCount)      // 设置顶点数量
-                // Because we interleave position and color data we must specify offset and stride
-                // 因为我们交错存储位置和切线数据，所以必须指定偏移量和步长
-                // We could use de-interleaved data by declaring two buffers and giving each
-                // 我们可以通过声明两个缓冲区并给每个属性不同的缓冲区索引来使用非交错数据
-                // attribute a different buffer index
-                // 为位置属性指定缓冲区布局（缓冲区索引，类型，偏移量，步长）
-                .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0,             vertexSize)
-                // 为切线属性指定缓冲区布局（缓冲区索引，类型，偏移量，步长）
-                .attribute(VertexAttribute.TANGENTS, 0, AttributeType.FLOAT4, 3 * floatSize, vertexSize)
-                .build(engine)
+            .bufferCount(1)                // 使用1个缓冲区
+            .vertexCount(vertexCount)      // 设置顶点数量
+            // Because we interleave position and color data we must specify offset and stride
+            // 因为我们交错存储位置和切线数据，所以必须指定偏移量和步长
+            // We could use de-interleaved data by declaring two buffers and giving each
+            // 我们可以通过声明两个缓冲区并给每个属性不同的缓冲区索引来使用非交错数据
+            // attribute a different buffer index
+            // 为位置属性指定缓冲区布局（缓冲区索引，类型，偏移量，步长）
+            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, vertexSize)
+            // 为切线属性指定缓冲区布局（缓冲区索引，类型，偏移量，步长）
+            .attribute(VertexAttribute.TANGENTS, 0, AttributeType.FLOAT4, 3 * floatSize, vertexSize)
+            .build(engine)
 
         // Feed the vertex data to the mesh
         // 将顶点数据提供给网格
@@ -462,24 +605,24 @@ class MainActivity : Activity() {
         // Create the indices
         // 创建索引数据，用于定义三角形
         val indexData = ByteBuffer.allocate(6 * 2 * 3 * shortSize)  // 6个面，每面2个三角形，每个三角形3个索引
-                .order(ByteOrder.nativeOrder())
+            .order(ByteOrder.nativeOrder())
         repeat(6) {
             // 为每个面创建两个三角形（每个面由4个顶点组成，分成2个三角形）
             val i = (it * 4).toShort()  // 当前面的第一个顶点索引
             indexData
-                    // 第一个三角形：顶点0-1-2
-                    .putShort(i).putShort((i + 1).toShort()).putShort((i + 2).toShort())
-                    // 第二个三角形：顶点0-2-3
-                    .putShort(i).putShort((i + 2).toShort()).putShort((i + 3).toShort())
+                // 第一个三角形：顶点0-1-2
+                .putShort(i).putShort((i + 1).toShort()).putShort((i + 2).toShort())
+                // 第二个三角形：顶点0-2-3
+                .putShort(i).putShort((i + 2).toShort()).putShort((i + 3).toShort())
         }
         indexData.flip()  // 准备读取数据
 
         // 6 faces, 2 triangles per face,
         // 6个面，每个面2个三角形
         indexBuffer = IndexBuffer.Builder()
-                .indexCount(vertexCount * 2)  // 索引数量 = 顶点数量 * 2（每个面4个顶点组成2个三角形）
-                .bufferType(IndexBuffer.Builder.IndexType.USHORT)  // 使用无符号短整型作为索引类型
-                .build(engine)
+            .indexCount(vertexCount * 2)  // 索引数量 = 顶点数量 * 2（每个面4个顶点组成2个三角形）
+            .bufferType(IndexBuffer.Builder.IndexType.USHORT)  // 使用无符号短整型作为索引类型
+            .build(engine)
         // 将索引数据设置到索引缓冲区
         indexBuffer.setBuffer(engine, indexData)
     }
