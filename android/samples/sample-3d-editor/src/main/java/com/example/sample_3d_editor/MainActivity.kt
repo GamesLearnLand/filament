@@ -209,7 +209,7 @@ class MainActivity : Activity() {
     // 设置视图和摄像机
     private fun setupView() {
         // 设置场景的天空盒，提供背景颜色
-        scene.skybox = Skybox.Builder().color(0.1f, 0.1f, 0.1f, 1.0f).build(engine)
+        scene.skybox = Skybox.Builder().color(0.035f, 0.035f, 0.035f, 1.0f).build(engine)
         // 将摄像机与视图关联
         view.camera = camera
         // 将场景与视图关联
@@ -781,12 +781,13 @@ class MainActivity : Activity() {
         // 创建光源实体
         light = EntityManager.get().create()
         // 将色温转换为 RGB 颜色
-        val (r, g, b) = Colors.cct(6_500.0f)
+        val (r, g, b) = Colors.cct(5_500.0f)
         // 创建平行光
         LightManager.Builder(LightManager.Type.DIRECTIONAL)
             .color(r, g, b) // 设置颜色
-            .intensity(120_000.0f) // 设置强度
-            .direction(-0.5f, -1.0f, -0.5f) // 设置方向
+            .intensity(110_000.0f)
+            // 光照方向（会自动归一化）
+            .direction(0.0f, -0.5f, -1.0f)
             .castShadows(true) // 开启阴影
             .build(engine, light)
         // 将光源添加到场景
