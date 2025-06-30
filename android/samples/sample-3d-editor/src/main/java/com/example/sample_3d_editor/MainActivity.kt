@@ -739,17 +739,10 @@ class MainActivity : Activity() {
         val transform = tm.getInstance(smallBoxRenderable)
         val matrix = FloatArray(16)
 
-        // 创建平移矩阵
-        // 手动创建单位矩阵
-        for (i in matrix.indices) {
-            matrix[i] = 0.0f
-        }
-        matrix[0] = 1.0f   // m00
-        matrix[5] = 1.0f   // m11
-        matrix[10] = 1.0f  // m22
-        matrix[15] = 1.0f  // m33
+        // 获取当前的变换矩阵，保持现有的缩放和旋转信息
+        tm.getTransform(transform, matrix)
 
-        // 设置平移分量
+        // 只修改平移分量，保持其他变换信息不变
         matrix[12] = smallBoxX
         matrix[13] = smallBoxY
         matrix[14] = smallBoxZ
