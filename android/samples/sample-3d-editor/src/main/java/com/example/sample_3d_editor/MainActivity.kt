@@ -1,6 +1,5 @@
 package com.example.sample_3d_editor
 
-import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
@@ -9,8 +8,6 @@ import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.Surface
 import android.view.SurfaceView
-import android.view.animation.LinearInterpolator
-import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.google.android.filament.Box
 import com.google.android.filament.Camera
@@ -21,7 +18,6 @@ import com.google.android.filament.EntityManager
 import com.google.android.filament.Filament
 import com.google.android.filament.IndexBuffer
 import com.google.android.filament.LightManager
-import com.google.android.filament.MathUtils
 import com.google.android.filament.RenderableManager
 import com.google.android.filament.RenderableManager.PrimitiveType
 import com.google.android.filament.Renderer
@@ -38,7 +34,6 @@ import com.google.android.filament.android.FilamentHelper
 import com.google.android.filament.android.UiHelper
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.channels.Channels
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -73,7 +68,6 @@ class MainActivity : Activity() {
 
     // UI 组件
     private lateinit var surfaceView: SurfaceView // 用于显示 3D 内容的 SurfaceView，是 Filament 渲染的目标
-    private lateinit var infoText: TextView // 用于显示提示信息的文本框
     private lateinit var rootLayout: ConstraintLayout // 界面的根布局
 
     // Filament 相关组件
@@ -90,20 +84,8 @@ class MainActivity : Activity() {
      */
     private lateinit var camera: Camera
 
-    // 材质（Materials）
-    // 这些材质定义了物体的外观，但在此示例中被注释掉了。
-    // private lateinit var litMaterial: Material // 受光照影响的材质
-    // private lateinit var unlitMaterial: Material // 不受光照影响的材质
-    // private lateinit var cubeMaterialInstance: MaterialInstance // 立方体的材质实例
-    // private lateinit var axisMaterialInstance: MaterialInstance // 坐标轴的材质实例
-
-    // 几何体（Geometry）
-    private lateinit var cubeVertexBuffer: VertexBuffer // 存储立方体顶点数据的缓冲区
-    private lateinit var cubeIndexBuffer: IndexBuffer // 存储立方体索引数据的缓冲区
     private lateinit var axisVertexBuffer: VertexBuffer // 存储坐标轴顶点数据的缓冲区
     private lateinit var axisIndexBuffer: IndexBuffer // 存储坐标轴索引数据的缓冲区
-    private lateinit var axisLabelVertexBuffer: VertexBuffer // 存储坐标轴标识的顶点数据缓冲区
-    private lateinit var axisLabelIndexBuffer: IndexBuffer // 存储坐标轴标识的索引数据缓冲区
     private lateinit var smallBoxVertexBuffer: VertexBuffer // 存储小方块顶点数据的缓冲区
     private lateinit var smallBoxIndexBuffer: IndexBuffer // 存储小方块索引数据的缓冲区
 
@@ -126,7 +108,6 @@ class MainActivity : Activity() {
 
     private var swapChain: SwapChain? = null // 用于将渲染结果呈现到屏幕的交换链
     private val frameScheduler = FrameCallback() // 帧回调，用于在每一帧触发渲染
-    private val animator = ValueAnimator.ofFloat(0.0f, 360.0f) // 用于动画的值动画器
 
     // 摄像机控制参数
 
@@ -144,9 +125,6 @@ class MainActivity : Activity() {
      * 摄像机的垂直旋转角度
      */
     private var cameraAngleY = 45.0f
-
-    private val cameraMatrix = FloatArray(16) // 摄像机的变换矩阵
-    private val viewMatrix = FloatArray(16) // 视图矩阵
 
     // 小方块控制参数
     private var smallBoxX = 2.0f // 小方块的X坐标
@@ -191,25 +169,6 @@ class MainActivity : Activity() {
         )
         surfaceView.layoutParams = surfaceParams
         rootLayout.addView(surfaceView)
-
-        // 创建 TextView 用于显示提示信息
-//        infoText = TextView(this)
-//        infoText.text = "3D坐标轴演示\n点击坐标轴改变视角\n拖拽旋转视图"
-//        infoText.setTextColor(0xFFFFFFFF.toInt()) // 设置文字颜色为白色
-//        infoText.textSize = 12f
-//        infoText.setPadding(24, 24, 24, 24)
-//        infoText.setBackgroundColor(0x80000000.toInt()) // 设置半透明背景
-//
-//        // 设置 TextView 的布局参数
-//        val textParams = ConstraintLayout.LayoutParams(
-//            ConstraintLayout.LayoutParams.WRAP_CONTENT,
-//            ConstraintLayout.LayoutParams.WRAP_CONTENT
-//        )
-//        textParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-//        textParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-//        textParams.setMargins(48, 48, 0, 0)
-//        infoText.layoutParams = textParams
-//        rootLayout.addView(infoText)
 
         // 将根布局设置为 Activity 的内容视图
         setContentView(rootLayout)
@@ -257,153 +216,14 @@ class MainActivity : Activity() {
 
     // 设置场景，包括创建物体、材质和光源
     private fun setupScene() {
-        // 在此示例中，材质加载和设置被注释掉了
-        // loadMaterials()
-        // setupMaterials()
-
-        // 创建立方体的网格数据
-        createCubeMesh()
         // 创建坐标轴的网格数据
         createAxisMesh()
-        // 创建坐标轴标识的网格数据
-        createAxisLabelMesh()
         // 创建小方块的网格数据
         createSmallBoxMesh()
         // 创建可渲染实体并将其添加到场景中
         createRenderables()
         // 设置场景光照
         setupLighting()
-    }
-
-    // 加载材质文件
-    private fun loadMaterials() {
-        // 从 assets 中加载 lit.filamat 文件作为受光照的材质
-        // readUncompressedAsset("materials/lit.filamat").let {
-        //     litMaterial = Material.Builder().payload(it, it.remaining()).build(engine)
-        // }
-        //
-        // // 从 assets 中加载 unlit.filamat 文件作为不受光照的材质
-        // readUncompressedAsset("materials/unlit.filamat").let {
-        //     unlitMaterial = Material.Builder().payload(it, it.remaining()).build(engine)
-        // }
-    }
-
-    // 设置材质属性
-    // private fun setupMaterials() {
-    //     // 设置立方体的材质实例，定义其颜色、金属度和粗糙度
-    //     // cubeMaterialInstance = litMaterial.createInstance()
-    //     // cubeMaterialInstance.setParameter("baseColor", Colors.RgbType.SRGB, 0.2f, 0.5f, 1.0f)
-    //     // cubeMaterialInstance.setParameter("metallic", 0.8f)
-    //     // cubeMaterialInstance.setParameter("roughness", 0.2f)
-    //     //
-    //     // // 设置坐标轴的材质实例
-    //     // axisMaterialInstance = unlitMaterial.createInstance()
-    // }
-
-    // 创建立方体的网格数据，包括顶点和索引
-    private fun createCubeMesh() {
-        val floatSize = 4 // Float 类型占用的字节数
-        val vertexSize = 3 * floatSize + 4 * floatSize // 每个顶点的大小（位置 + 切线）
-        val vertexCount = 24 // 立方体有 6 个面，每个面 4 个顶点
-
-        // 定义顶点数据结构
-        data class Vertex(val x: Float, val y: Float, val z: Float, val tangents: FloatArray)
-
-        // 扩展 ByteBuffer 以方便地添加顶点数据
-        fun ByteBuffer.put(v: Vertex): ByteBuffer {
-            putFloat(v.x)
-            putFloat(v.y)
-            putFloat(v.z)
-            v.tangents.forEach { putFloat(it) }
-            return this
-        }
-
-        // 为每个面创建切线帧，用于光照计算
-        val tfPX = FloatArray(4)
-        val tfNX = FloatArray(4)
-        val tfPY = FloatArray(4)
-        val tfNY = FloatArray(4)
-        val tfPZ = FloatArray(4)
-        val tfNZ = FloatArray(4)
-
-        // 使用 MathUtils.packTangentFrame 计算切线帧
-        MathUtils.packTangentFrame(0.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, tfPX)
-        MathUtils.packTangentFrame(0.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f, -1.0f, 0.0f, 0.0f, tfNX)
-        MathUtils.packTangentFrame(-1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, tfPY)
-        MathUtils.packTangentFrame(-1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f, tfNY)
-        MathUtils.packTangentFrame(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, tfPZ)
-        MathUtils.packTangentFrame(0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, tfNZ)
-
-        // 分配 ByteBuffer 并填充顶点数据
-        val vertexData = ByteBuffer.allocate(vertexCount * vertexSize)
-            .order(ByteOrder.nativeOrder()) // 使用本地字节序
-            // -Z 面
-            .put(Vertex(-1.0f, -1.0f, -1.0f, tfNZ))
-            .put(Vertex(-1.0f, 1.0f, -1.0f, tfNZ))
-            .put(Vertex(1.0f, 1.0f, -1.0f, tfNZ))
-            .put(Vertex(1.0f, -1.0f, -1.0f, tfNZ))
-            // +X 面
-            .put(Vertex(1.0f, -1.0f, -1.0f, tfPX))
-            .put(Vertex(1.0f, 1.0f, -1.0f, tfPX))
-            .put(Vertex(1.0f, 1.0f, 1.0f, tfPX))
-            .put(Vertex(1.0f, -1.0f, 1.0f, tfPX))
-            // +Z 面
-            .put(Vertex(-1.0f, -1.0f, 1.0f, tfPZ))
-            .put(Vertex(1.0f, -1.0f, 1.0f, tfPZ))
-            .put(Vertex(1.0f, 1.0f, 1.0f, tfPZ))
-            .put(Vertex(-1.0f, 1.0f, 1.0f, tfPZ))
-            // -X 面
-            .put(Vertex(-1.0f, -1.0f, 1.0f, tfNX))
-            .put(Vertex(-1.0f, 1.0f, 1.0f, tfNX))
-            .put(Vertex(-1.0f, 1.0f, -1.0f, tfNX))
-            .put(Vertex(-1.0f, -1.0f, -1.0f, tfNX))
-            // -Y 面
-            .put(Vertex(-1.0f, -1.0f, 1.0f, tfNY))
-            .put(Vertex(-1.0f, -1.0f, -1.0f, tfNY))
-            .put(Vertex(1.0f, -1.0f, -1.0f, tfNY))
-            .put(Vertex(1.0f, -1.0f, 1.0f, tfNY))
-            // +Y 面
-            .put(Vertex(-1.0f, 1.0f, -1.0f, tfPY))
-            .put(Vertex(-1.0f, 1.0f, 1.0f, tfPY))
-            .put(Vertex(1.0f, 1.0f, 1.0f, tfPY))
-            .put(Vertex(1.0f, 1.0f, -1.0f, tfPY))
-            .flip() // 重置缓冲区的位置
-
-        // 创建 VertexBuffer，定义顶点属性
-        cubeVertexBuffer = VertexBuffer.Builder()
-            .bufferCount(1) // 使用一个缓冲区
-            .vertexCount(vertexCount) // 顶点数量
-            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, vertexSize) // 位置属性
-            .attribute(
-                VertexAttribute.TANGENTS,
-                0,
-                AttributeType.FLOAT4,
-                3 * floatSize,
-                vertexSize
-            ) // 切线属性
-            .build(engine)
-        // 将顶点数据设置到 VertexBuffer
-        cubeVertexBuffer.setBufferAt(engine, 0, vertexData)
-
-        // 创建立方体的索引数据
-        val shortSize = 2 // Short 类型占用的字节数
-        val indexData = ByteBuffer.allocate(6 * 2 * 3 * shortSize) // 6 个面，每个面 2 个三角形，每个三角形 3 个顶点
-            .order(ByteOrder.nativeOrder())
-        repeat(6) { // 为每个面生成索引
-            val i = (it * 4).toShort()
-            indexData
-                .putShort(i).putShort((i + 1).toShort()).putShort((i + 2).toShort())
-                .putShort(i).putShort((i + 2).toShort()).putShort((i + 3).toShort())
-        }
-        indexData.flip()
-
-        // 创建 IndexBuffer
-        cubeIndexBuffer = IndexBuffer.Builder()
-            .indexCount(36) // 索引数量
-            .bufferType(IndexBuffer.Builder.IndexType.USHORT) // 索引类型
-            .build(engine)
-        // 将索引数据设置到 IndexBuffer
-        cubeIndexBuffer.setBuffer(engine, indexData)
     }
 
     // 创建坐标轴的网格数据
@@ -479,134 +299,6 @@ class MainActivity : Activity() {
             .bufferType(IndexBuffer.Builder.IndexType.USHORT)
             .build(engine)
         axisIndexBuffer.setBuffer(engine, indexData)
-    }
-
-    // 创建坐标轴标识的网格数据（在每个轴的端点附近添加小立方体作为标识）
-    private fun createAxisLabelMesh() {
-        val floatSize = 4
-        val vertexSize = 3 * floatSize + 4 * floatSize // 每个顶点的大小（位置 + 颜色）
-
-        val axisLength = 3.0f
-        val labelSize = 0.15f // 标识立方体的大小
-        val labelOffset = 0.3f // 标识距离轴端点的偏移
-
-        // 定义带颜色的顶点数据结构
-        data class ColorVertex(
-            val x: Float,
-            val y: Float,
-            val z: Float,
-            val r: Float,
-            val g: Float,
-            val b: Float,
-            val a: Float
-        )
-
-        fun ByteBuffer.put(v: ColorVertex): ByteBuffer {
-            putFloat(v.x)
-            putFloat(v.y)
-            putFloat(v.z)
-            putFloat(v.r)
-            putFloat(v.g)
-            putFloat(v.b)
-            putFloat(v.a)
-            return this
-        }
-
-        // 创建三个小立方体作为X、Y、Z轴的标识
-        // 每个立方体8个顶点
-        val labelVertexData = ByteBuffer.allocate(24 * vertexSize) // 3个立方体 * 8个顶点
-            .order(ByteOrder.nativeOrder())
-
-        // X轴标识立方体（红色）- 位于X轴端点附近
-        val xPos = axisLength + labelOffset
-        labelVertexData
-            .put(ColorVertex(xPos - labelSize, -labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-            .put(ColorVertex(xPos + labelSize, -labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-            .put(ColorVertex(xPos + labelSize, labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-            .put(ColorVertex(xPos - labelSize, labelSize, -labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-            .put(ColorVertex(xPos - labelSize, -labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-            .put(ColorVertex(xPos + labelSize, -labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-            .put(ColorVertex(xPos + labelSize, labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-            .put(ColorVertex(xPos - labelSize, labelSize, labelSize, 1.0f, 0.0f, 0.0f, 1.0f))
-
-        // Y轴标识立方体（绿色）- 位于Y轴端点附近
-        val yPos = axisLength + labelOffset
-        labelVertexData
-            .put(ColorVertex(-labelSize, yPos - labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-            .put(ColorVertex(labelSize, yPos - labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-            .put(ColorVertex(labelSize, yPos + labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-            .put(ColorVertex(-labelSize, yPos + labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-            .put(ColorVertex(-labelSize, yPos - labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-            .put(ColorVertex(labelSize, yPos - labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-            .put(ColorVertex(labelSize, yPos + labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-            .put(ColorVertex(-labelSize, yPos + labelSize, labelSize, 0.0f, 1.0f, 0.0f, 1.0f))
-
-        // Z轴标识立方体（蓝色）- 位于Z轴端点附近
-        val zPos = axisLength + labelOffset
-        labelVertexData
-            .put(ColorVertex(-labelSize, -labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-            .put(ColorVertex(labelSize, -labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-            .put(ColorVertex(labelSize, labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-            .put(ColorVertex(-labelSize, labelSize, zPos - labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-            .put(ColorVertex(-labelSize, -labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-            .put(ColorVertex(labelSize, -labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-            .put(ColorVertex(labelSize, labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-            .put(ColorVertex(-labelSize, labelSize, zPos + labelSize, 0.0f, 0.0f, 1.0f, 1.0f))
-            .flip()
-
-        // 创建坐标轴标识的 VertexBuffer
-        axisLabelVertexBuffer = VertexBuffer.Builder()
-            .bufferCount(1)
-            .vertexCount(24) // 3个立方体 * 8个顶点
-            .attribute(VertexAttribute.POSITION, 0,
-                AttributeType.FLOAT3, 0, vertexSize) // 位置属性
-            .attribute(
-                VertexAttribute.COLOR,
-                0,
-                AttributeType.FLOAT4,
-                3 * floatSize,
-                vertexSize
-            ) // 颜色属性
-            .build(engine)
-        axisLabelVertexBuffer.setBufferAt(engine, 0, labelVertexData)
-
-        // 创建立方体的索引数据（每个立方体12个三角形，36个索引）
-        val indexData = ByteBuffer.allocate(3 * 36 * 2) // 3个立方体 * 36个索引 * 2字节
-            .order(ByteOrder.nativeOrder())
-
-        // 为每个立方体生成索引
-        repeat(3) { cubeIndex ->
-            val offset = (cubeIndex * 8).toShort()
-            // 立方体的6个面，每个面2个三角形
-            val faces = arrayOf(
-                // 前面
-                shortArrayOf(0, 1, 2, 0, 2, 3),
-                // 后面
-                shortArrayOf(4, 7, 6, 4, 6, 5),
-                // 左面
-                shortArrayOf(0, 3, 7, 0, 7, 4),
-                // 右面
-                shortArrayOf(1, 5, 6, 1, 6, 2),
-                // 底面
-                shortArrayOf(0, 4, 5, 0, 5, 1),
-                // 顶面
-                shortArrayOf(3, 2, 6, 3, 6, 7)
-            )
-
-            faces.forEach { face ->
-                face.forEach { vertex ->
-                    indexData.putShort((offset + vertex).toShort())
-                }
-            }
-        }
-        indexData.flip()
-
-        // 创建坐标轴标识的 IndexBuffer
-        axisLabelIndexBuffer = IndexBuffer.Builder()
-            .indexCount(108) // 3个立方体 * 36个索引
-            .bufferType(IndexBuffer.Builder.IndexType.USHORT)
-            .build(engine)
-        axisLabelIndexBuffer.setBuffer(engine, indexData)
     }
 
     // 创建小方块的网格数据
@@ -697,46 +389,23 @@ class MainActivity : Activity() {
 
     // 创建可渲染实体并将其添加到场景中
     private fun createRenderables() {
-        // 创建立方体的可渲染实体
-        cubeRenderable = EntityManager.get().create()
-        RenderableManager.Builder(1)
-            .boundingBox(
-                Box(-1.0f, -1.0f, -1.0f,
-                    1.0f, 1.0f, 1.0f)) // 设置包围盒，用于剔除
-            .geometry(0, PrimitiveType.TRIANGLES,
-                cubeVertexBuffer, cubeIndexBuffer, 0, 36) // 关联几何体
-            // .material(0, cubeMaterialInstance) // 关联材质（已注释）
-            .build(engine, cubeRenderable)
-        scene.addEntity(cubeRenderable) // 将实体添加到场景
 
         // 创建坐标轴的可渲染实体
         axisRenderable = EntityManager.get().create()
         RenderableManager.Builder(1)
             .boundingBox(
-                Box(-3.0f, -3.0f, -3.0f,
-                    3.0f, 3.0f, 3.0f))
-            .geometry(0, PrimitiveType.LINES,
-                axisVertexBuffer, axisIndexBuffer, 0, 6) // 关联几何体
+                Box(
+                    -3.0f, -3.0f, -3.0f,
+                    3.0f, 3.0f, 3.0f
+                )
+            )
+            .geometry(
+                0, PrimitiveType.LINES,
+                axisVertexBuffer, axisIndexBuffer, 0, 6
+            ) // 关联几何体
             // .material(0, axisMaterialInstance) // 关联材质（已注释）
             .build(engine, axisRenderable)
         scene.addEntity(axisRenderable)
-
-        // 创建坐标轴标识的可渲染实体
-        axisLabelRenderable = EntityManager.get().create()
-        RenderableManager.Builder(1)
-            .boundingBox(Box(-4.0f, -4.0f, -4.0f,
-                4.0f, 4.0f, 4.0f))
-            .geometry(
-                0,
-                PrimitiveType.TRIANGLES,
-                axisLabelVertexBuffer,
-                axisLabelIndexBuffer,
-                0,
-                108
-            ) // 关联几何体
-            // .material(0, axisMaterialInstance) // 关联材质（已注释）
-            .build(engine, axisLabelRenderable)
-        scene.addEntity(axisLabelRenderable)
 
         // 创建小方块的可渲染实体
         smallBoxRenderable = EntityManager.get().create()
@@ -745,7 +414,7 @@ class MainActivity : Activity() {
             .geometry(0, PrimitiveType.TRIANGLES, smallBoxVertexBuffer, smallBoxIndexBuffer, 0, 36)
             .build(engine, smallBoxRenderable)
         scene.addEntity(smallBoxRenderable)
-        
+
         // 设置小方块的初始位置
         updateSmallBoxPosition()
     }
@@ -798,7 +467,7 @@ class MainActivity : Activity() {
         val tm = engine.transformManager
         val transform = tm.getInstance(smallBoxRenderable)
         val matrix = FloatArray(16)
-        
+
         // 创建平移矩阵
         // 手动创建单位矩阵
         for (i in matrix.indices) {
@@ -808,12 +477,12 @@ class MainActivity : Activity() {
         matrix[5] = 1.0f   // m11
         matrix[10] = 1.0f  // m22
         matrix[15] = 1.0f  // m33
-        
+
         // 设置平移分量
         matrix[12] = smallBoxX
         matrix[13] = smallBoxY
         matrix[14] = smallBoxZ
-        
+
         tm.setTransform(transform, matrix)
     }
 
@@ -829,7 +498,7 @@ class MainActivity : Activity() {
             MotionEvent.ACTION_DOWN -> {
                 lastX = event.x
                 lastY = event.y
-                
+
                 // 检查是否点击了小方块
                 if (checkSmallBoxClick(event.x, event.y)) {
                     isDraggingSmallBox = true
@@ -839,7 +508,7 @@ class MainActivity : Activity() {
                     isDragging = true
                     isSmallBoxSelected = false
                     // 检查是否点击了坐标轴端点以切换视角
-                    checkAxisClick(event.x, event.y)
+//                    checkAxisClick(event.x, event.y)
                 }
                 return true
             }
@@ -849,14 +518,14 @@ class MainActivity : Activity() {
                     // 拖拽小方块
                     val deltaX = event.x - lastX
                     val deltaY = event.y - lastY
-                    
+
                     // 将屏幕坐标转换为世界坐标的移动
                     val sensitivity = 0.01f
                     smallBoxX += deltaX * sensitivity
                     smallBoxY -= deltaY * sensitivity // Y轴反向
-                    
+
                     updateSmallBoxPosition()
-                    
+
                     Log.d(TAG, "Moving small box to: ($smallBoxX, $smallBoxY, $smallBoxZ)")
                 } else if (isDragging) {
                     // 旋转摄像机
@@ -867,15 +536,13 @@ class MainActivity : Activity() {
                     cameraAngleY += deltaX * 0.5f
                     cameraAngleX += deltaY * 0.5f
 
-                    Log.d(TAG, "ACTION_MOVE: y:${cameraAngleY};x:${cameraAngleX}")
-
                     // 限制垂直角度范围，防止摄像机翻转
                     cameraAngleX = cameraAngleX.coerceIn(-89f, 89f)
 
                     // 更新摄像机
                     updateCamera()
                 }
-                
+
                 // 更新最后位置
                 lastX = event.x
                 lastY = event.y
@@ -896,86 +563,54 @@ class MainActivity : Activity() {
         // 获取视图矩阵和投影矩阵
         val viewMatrix = DoubleArray(16)
         val projectionMatrix = DoubleArray(16)
-        
+
         camera.getViewMatrix(viewMatrix)
         camera.getProjectionMatrix(projectionMatrix)
 
         val projectionMatrixFloat = projectionMatrix.map { it.toFloat() }.toFloatArray()
         val viewMatrixFloat = viewMatrix.map { it.toFloat() }.toFloatArray()
-        
+
         // 使用简化的投影计算
         val mvpMatrix = FloatArray(16)
         android.opengl.Matrix.multiplyMM(mvpMatrix, 0, projectionMatrixFloat, 0, viewMatrixFloat, 0)
-        
-        val worldPos4 = doubleArrayOf(smallBoxX.toDouble(), smallBoxY.toDouble(), smallBoxZ.toDouble(), 1.0)
+
+        val worldPos4 =
+            doubleArrayOf(smallBoxX.toDouble(), smallBoxY.toDouble(), smallBoxZ.toDouble(), 1.0)
         val clipPos = DoubleArray(4)
-        
+
         // 矩阵乘法：MVP * worldPos
         for (i in 0..3) {
             clipPos[i] = mvpMatrix[i * 4] * worldPos4[0] +
-                        mvpMatrix[i * 4 + 1] * worldPos4[1] +
-                        mvpMatrix[i * 4 + 2] * worldPos4[2] +
-                        mvpMatrix[i * 4 + 3] * worldPos4[3]
+                mvpMatrix[i * 4 + 1] * worldPos4[1] +
+                mvpMatrix[i * 4 + 2] * worldPos4[2] +
+                mvpMatrix[i * 4 + 3] * worldPos4[3]
         }
-        
+
         // 透视除法
         if (clipPos[3] != 0.0) {
             val ndcX = clipPos[0] / clipPos[3]
             val ndcY = clipPos[1] / clipPos[3]
-            
+
             // 转换到屏幕坐标
             val projectedX = (ndcX + 1.0) * 0.5 * surfaceView.width
             val projectedY = (1.0 - ndcY) * 0.5 * surfaceView.height
-            
+
             // 检查点击是否在小方块附近（使用一个较大的点击区域）
             val clickRadius = 50.0
             val distance = kotlin.math.sqrt(
                 (screenX - projectedX) * (screenX - projectedX) +
-                (screenY - projectedY) * (screenY - projectedY)
+                    (screenY - projectedY) * (screenY - projectedY)
             )
-            
-            Log.d(TAG, "Small box screen pos: ($projectedX, $projectedY), click: ($screenX, $screenY), distance: $distance")
-            
+
+            Log.d(
+                TAG,
+                "Small box screen pos: ($projectedX, $projectedY), click: ($screenX, $screenY), distance: $distance"
+            )
+
             return distance < clickRadius
         }
-        
+
         return false
-    }
-
-    // 检查是否点击了坐标轴以切换视角
-    private fun checkAxisClick(x: Float, y: Float) {
-        // 简单的点击检测，用于切换坐标轴视角
-        val centerX = surfaceView.width / 2f
-        val centerY = surfaceView.height / 2f
-
-        // 检查点击是否在屏幕下半部分（坐标轴大致位置）
-        if (y > centerY + 100) {
-            when {
-                x < centerX - 50 -> switchToView(-90f, 0f) // X 轴视角
-                x > centerX + 50 -> switchToView(0f, 90f)   // Z 轴视角
-                else -> switchToView(90f, 0f)               // Y 轴视角
-            }
-        }
-    }
-
-    // 切换到指定的摄像机视角
-    private fun switchToView(angleX: Float, angleY: Float) {
-        // 使用 ValueAnimator 平滑地过渡到新的摄像机角度
-        val startAngleX = cameraAngleX
-        val startAngleY = cameraAngleY
-
-        ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 500 // 动画时长
-            interpolator = LinearInterpolator() // 线性插值器
-            addUpdateListener { animation ->
-                val progress = animation.animatedValue as Float
-                // 根据动画进度更新摄像机角度
-                cameraAngleX = startAngleX + (angleX - startAngleX) * progress
-                cameraAngleY = startAngleY + (angleY - startAngleY) * progress
-                updateCamera()
-            }
-            start()
-        }
     }
 
     // Activity onResume 时，注册帧回调以开始渲染
@@ -1005,18 +640,10 @@ class MainActivity : Activity() {
         engine.destroyEntity(axisLabelRenderable)
         engine.destroyEntity(smallBoxRenderable)
         engine.destroyRenderer(renderer)
-        engine.destroyVertexBuffer(cubeVertexBuffer)
-        engine.destroyIndexBuffer(cubeIndexBuffer)
         engine.destroyVertexBuffer(axisVertexBuffer)
         engine.destroyIndexBuffer(axisIndexBuffer)
-        engine.destroyVertexBuffer(axisLabelVertexBuffer)
-        engine.destroyIndexBuffer(axisLabelIndexBuffer)
         engine.destroyVertexBuffer(smallBoxVertexBuffer)
         engine.destroyIndexBuffer(smallBoxIndexBuffer)
-        // engine.destroyMaterialInstance(cubeMaterialInstance)
-        // engine.destroyMaterialInstance(axisMaterialInstance)
-        // engine.destroyMaterial(litMaterial)
-        // engine.destroyMaterial(unlitMaterial)
         engine.destroyView(view)
         engine.destroyScene(scene)
         engine.destroyCameraComponent(camera.entity)
@@ -1080,37 +707,4 @@ class MainActivity : Activity() {
             FilamentHelper.synchronizePendingFrames(engine)
         }
     }
-
-    // 从 assets 目录读取未压缩的文件
-    private fun readUncompressedAsset(assetName: String): ByteBuffer {
-        assets.openFd(assetName).use { fd ->
-            val input = fd.createInputStream()
-            val dst = ByteBuffer.allocate(fd.length.toInt())
-            val src = Channels.newChannel(input)
-            src.read(dst)
-            src.close()
-            return dst.apply { rewind() }
-        }
-    }
 }
-
-// 业务流程说明：
-// 1. onCreate() 初始化 UI、SurfaceView、Filament 渲染环境和场景。
-// 2. setupUI() 构建界面布局和提示文本。
-// 3. setupSurfaceView() 配置 SurfaceView 并绑定触摸事件。
-// 4. setupFilament() 创建 Filament 引擎及核心对象。
-// 5. setupView() 设置天空盒、摄像机和视图参数。
-// 6. setupScene() 创建立方体和坐标轴网格，添加到场景。
-// 7. setupLighting() 添加方向光源并设置曝光。
-// 8. handleTouch() 处理用户拖拽和点击，实现视角旋转与切换。
-// 9. FrameCallback 实现每帧渲染。
-// 10. SurfaceCallback 响应 Surface 变化，调整视口和投影。
-// 11. onDestroy() 释放所有资源，防止内存泄漏。
-// Filament 用法说明：
-// - 通过 Engine.create() 创建渲染引擎。
-// - 使用 VertexBuffer/IndexBuffer 构建几何体。
-// - RenderableManager.Builder 创建可渲染实体。
-// - Scene.addEntity() 添加实体到场景。
-// - Camera 控制视角，lookAt 设置观察点。
-// - Renderer.beginFrame()/render()/endFrame() 完成一帧渲染。
-// - 资源需在 onDestroy() 中全部销毁。
