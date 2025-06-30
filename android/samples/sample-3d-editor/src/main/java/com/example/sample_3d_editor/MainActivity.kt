@@ -807,29 +807,22 @@ class MainActivity : Activity() {
             // 手指移动时，根据移动距离更新摄像机角度或移动小方块
             MotionEvent.ACTION_MOVE -> {
                 if (isDraggingSmallBox) {
-                    // 计算拖拽开始位置的世界坐标（使用固定深度）
-                    val startWorldPos = screenToWorldPosition(dragStartX, dragStartY, dragStartDepth)
-                    // 计算当前手指位置的世界坐标（使用相同的固定深度）
-                    val currentWorldPos = screenToWorldPosition(event.x, event.y, dragStartDepth)
+                    // 使用射线投射方法，在保持深度不变的平面上移动小方块
+                    val newWorldPos = screenToWorldPositionAtDepth(event.x, event.y, smallBoxStartZ)
                     
-                    if (startWorldPos != null && currentWorldPos != null) {
-                        // 计算世界坐标的偏移量
-                        val worldDeltaX = currentWorldPos[0] - startWorldPos[0]
-                        val worldDeltaY = currentWorldPos[1] - startWorldPos[1]
-                        val worldDeltaZ = currentWorldPos[2] - startWorldPos[2]
+                    if (newWorldPos != null) {
+                        // 更新小方块位置，严格保持Z坐标不变
+                        smallBoxX = newWorldPos[0]
+                        smallBoxY = newWorldPos[1]
+                        smallBoxZ = smallBoxStartZ // 确保深度绝对不变
                         
-                        // 基于初始位置和偏移量更新小方块位置
-                        smallBoxX = smallBoxStartX + worldDeltaX
-                        smallBoxY = smallBoxStartY + worldDeltaY
-                        smallBoxZ = smallBoxStartZ + worldDeltaZ
+                        updateSmallBoxPosition()
+
+                        Log.d(
+                            TAG,
+                            "Moving small box to: ($smallBoxX, $smallBoxY, $smallBoxZ), original depth: $smallBoxStartZ"
+                        )
                     }
-
-                    updateSmallBoxPosition()
-
-                    Log.d(
-                        TAG,
-                        "Moving small box to: ($smallBoxX, $smallBoxY, $smallBoxZ)"
-                    )
                 } else if (isDragging) {
                     // 旋转摄像机
                     val deltaX = event.x - lastX
@@ -997,6 +990,87 @@ class MainActivity : Activity() {
     }
 
     /**
+     * 在指定深度平面上将屏幕坐标转换为世界坐标
+     * 使用射线投射方法，确保结果在指定的Z深度平面上
+     * @param screenX 屏幕X坐标
+     * @param screenY 屏幕Y坐标
+     * @param targetDepthZ 目标世界坐标Z值（深度）
+     * @return 世界坐标数组[x, y, z]，如果转换失败返回null
+     */
+    private fun screenToWorldPositionAtDepth(screenX: Float, screenY: Float, targetDepthZ: Float): FloatArray? {
+        try {
+            // 获取视图矩阵和投影矩阵
+            val viewMatrix = DoubleArray(16)
+            val projectionMatrix = DoubleArray(16)
+            camera.getViewMatrix(viewMatrix)
+            camera.getProjectionMatrix(projectionMatrix)
+
+            // 转换为Float数组
+            val viewMatrixFloat = viewMatrix.map { it.toFloat() }.toFloatArray()
+            val projectionMatrixFloat = projectionMatrix.map { it.toFloat() }.toFloatArray()
+
+            // 计算视图投影矩阵的逆矩阵
+            val vpMatrix = FloatArray(16)
+            val vpInverseMatrix = FloatArray(16)
+            android.opengl.Matrix.multiplyMM(vpMatrix, 0, projectionMatrixFloat, 0, viewMatrixFloat, 0)
+            
+            if (!android.opengl.Matrix.invertM(vpInverseMatrix, 0, vpMatrix, 0)) {
+                return null // 矩阵不可逆
+            }
+
+            // 将屏幕坐标转换为NDC坐标
+            val ndcX = (screenX / surfaceView.width) * 2.0f - 1.0f
+            val ndcY = -((screenY / surfaceView.height) * 2.0f - 1.0f) // Y轴翻转
+
+            // 获取相机在世界空间的位置
+            val invViewMatrix = FloatArray(16)
+            android.opengl.Matrix.invertM(invViewMatrix, 0, viewMatrixFloat, 0)
+            val cameraWorldX = invViewMatrix[12]
+            val cameraWorldY = invViewMatrix[13]
+            val cameraWorldZ = invViewMatrix[14]
+            
+            // 在近平面上获取射线方向
+            val nearNdcPos = floatArrayOf(ndcX, ndcY, -1.0f, 1.0f)
+            val nearWorldPos = FloatArray(4)
+            android.opengl.Matrix.multiplyMV(nearWorldPos, 0, vpInverseMatrix, 0, nearNdcPos, 0)
+            if (nearWorldPos[3] != 0.0f) {
+                nearWorldPos[0] /= nearWorldPos[3]
+                nearWorldPos[1] /= nearWorldPos[3]
+                nearWorldPos[2] /= nearWorldPos[3]
+            }
+            
+            // 计算射线方向
+            val rayDirX = nearWorldPos[0] - cameraWorldX
+            val rayDirY = nearWorldPos[1] - cameraWorldY
+            val rayDirZ = nearWorldPos[2] - cameraWorldZ
+            
+            // 计算射线与Z=targetDepthZ平面的交点
+            // 射线方程: P = camera + t * rayDir
+            // 平面方程: Z = targetDepthZ
+            // 求解: cameraWorldZ + t * rayDirZ = targetDepthZ
+            if (kotlin.math.abs(rayDirZ) < 1e-6f) {
+                // 射线与平面平行，无交点
+                return null
+            }
+            
+            val t = (targetDepthZ - cameraWorldZ) / rayDirZ
+            if (t < 0) {
+                // 交点在相机后方
+                return null
+            }
+            
+            val intersectionX = cameraWorldX + t * rayDirX
+            val intersectionY = cameraWorldY + t * rayDirY
+            
+            return floatArrayOf(intersectionX, intersectionY, targetDepthZ)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error converting screen to world position at depth", e)
+            return null
+        }
+    }
+
+    /**
      * 将屏幕坐标转换为相机平面上的世界坐标
      * @param screenX 屏幕X坐标
      * @param screenY 屏幕Y坐标
@@ -1036,28 +1110,47 @@ class MainActivity : Activity() {
                 -currentViewPos[2] // 相机空间中的Z深度（负值转正值）
             }
 
-            // 将深度转换为NDC空间的Z值
+            // 创建射线：从相机位置到屏幕点在指定深度处的世界坐标
+            // 首先获取相机在世界空间的位置
+            val cameraWorldPos = FloatArray(3)
+            val invViewMatrix = FloatArray(16)
+            android.opengl.Matrix.invertM(invViewMatrix, 0, viewMatrixFloat, 0)
+            cameraWorldPos[0] = invViewMatrix[12]
+            cameraWorldPos[1] = invViewMatrix[13]
+            cameraWorldPos[2] = invViewMatrix[14]
+            
+            // 计算射线方向（从相机到屏幕点的方向）
             val nearPlane = 0.1f
             val farPlane = 20.0f
-            val ndcZ = (farPlane + nearPlane) / (farPlane - nearPlane) - (2.0f * farPlane * nearPlane) / ((farPlane - nearPlane) * useDepth)
-
-            // 构造NDC坐标
-            val ndcPos = floatArrayOf(ndcX, ndcY, ndcZ, 1.0f)
-
-            // 使用逆矩阵将NDC坐标转换回世界坐标
-            val worldPos = FloatArray(4)
-            android.opengl.Matrix.multiplyMV(worldPos, 0, vpInverseMatrix, 0, ndcPos, 0)
-
-            // 透视除法
-            if (worldPos[3] != 0.0f) {
-                return floatArrayOf(
-                    worldPos[0] / worldPos[3],
-                    worldPos[1] / worldPos[3],
-                    worldPos[2] / worldPos[3]
-                )
+            
+            // 在近平面上的点
+            val nearNdcZ = -1.0f
+            val nearNdcPos = floatArrayOf(ndcX, ndcY, nearNdcZ, 1.0f)
+            val nearWorldPos = FloatArray(4)
+            android.opengl.Matrix.multiplyMV(nearWorldPos, 0, vpInverseMatrix, 0, nearNdcPos, 0)
+            if (nearWorldPos[3] != 0.0f) {
+                nearWorldPos[0] /= nearWorldPos[3]
+                nearWorldPos[1] /= nearWorldPos[3]
+                nearWorldPos[2] /= nearWorldPos[3]
             }
-
-            return null
+            
+            // 计算射线方向
+            val rayDirX = nearWorldPos[0] - cameraWorldPos[0]
+            val rayDirY = nearWorldPos[1] - cameraWorldPos[1]
+            val rayDirZ = nearWorldPos[2] - cameraWorldPos[2]
+            
+            // 归一化射线方向
+            val rayLength = kotlin.math.sqrt(rayDirX * rayDirX + rayDirY * rayDirY + rayDirZ * rayDirZ)
+            val normalizedRayDirX = rayDirX / rayLength
+            val normalizedRayDirY = rayDirY / rayLength
+            val normalizedRayDirZ = rayDirZ / rayLength
+            
+            // 沿射线移动到指定深度
+            val targetWorldX = cameraWorldPos[0] + normalizedRayDirX * useDepth
+            val targetWorldY = cameraWorldPos[1] + normalizedRayDirY * useDepth
+            val targetWorldZ = cameraWorldPos[2] + normalizedRayDirZ * useDepth
+            
+            return floatArrayOf(targetWorldX, targetWorldY, targetWorldZ)
         } catch (e: Exception) {
             Log.e(TAG, "Error converting screen to world position", e)
             return null
