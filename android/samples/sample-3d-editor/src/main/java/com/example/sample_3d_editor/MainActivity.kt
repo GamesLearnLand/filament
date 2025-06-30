@@ -765,6 +765,14 @@ class MainActivity : Activity() {
     private var lastX = 0f
     private var lastY = 0f
     private var isDragging = false
+    
+    // 小方块拖拽相关变量
+    private var dragStartX = 0f
+    private var dragStartY = 0f
+    private var smallBoxStartX = 0f
+    private var smallBoxStartY = 0f
+    private var smallBoxStartZ = 0f
+    private var dragStartDepth = 0f // 拖拽开始时的深度值
 
     // 处理触摸事件，用于旋转摄像机或拖拽小方块
     private fun handleTouch(event: MotionEvent): Boolean {
@@ -778,6 +786,17 @@ class MainActivity : Activity() {
                 if (checkSmallBoxClick(event.x, event.y)) {
                     isDraggingSmallBox = true
                     isSmallBoxSelected = true
+                    
+                    // 记录拖拽开始时的屏幕坐标和小方块坐标
+                    dragStartX = event.x
+                    dragStartY = event.y
+                    smallBoxStartX = smallBoxX
+                    smallBoxStartY = smallBoxY
+                    smallBoxStartZ = smallBoxZ
+                    
+                    // 计算并记录拖拽开始时的深度值
+                    dragStartDepth = calculateDepthFromWorldPosition(smallBoxX, smallBoxY, smallBoxZ)
+                    
                     Log.d(TAG, "Small box selected")
                 } else {
                     isDragging = true
@@ -788,62 +807,28 @@ class MainActivity : Activity() {
             // 手指移动时，根据移动距离更新摄像机角度或移动小方块
             MotionEvent.ACTION_MOVE -> {
                 if (isDraggingSmallBox) {
-                    // 拖拽小方块
-                    val deltaX = event.x - lastX
-                    val deltaY = event.y - lastY
-
-                    // 根据摄像机距离和视角动态计算敏感度
-                    // 摄像机越远，移动敏感度应该越高
-                    val baseSensitivity = 0.005f
-                    val distanceFactor = cameraDistance / 8.0f // 8.0f是默认距离
-                    val sensitivity = baseSensitivity * distanceFactor
-
-                    // 考虑屏幕尺寸的影响
-                    val screenSizeFactor = kotlin.math.min(surfaceView.width, surfaceView.height) / 1000.0f
-                    val adjustedSensitivity = sensitivity * screenSizeFactor
-
-                    // 计算摄像机的视角向量和右向量，用于在相机平面内移动
-                    val radX = Math.toRadians(cameraAngleX.toDouble())
-                    val radY = Math.toRadians(cameraAngleY.toDouble())
+                    // 计算拖拽开始位置的世界坐标（使用固定深度）
+                    val startWorldPos = screenToWorldPosition(dragStartX, dragStartY, dragStartDepth)
+                    // 计算当前手指位置的世界坐标（使用相同的固定深度）
+                    val currentWorldPos = screenToWorldPosition(event.x, event.y, dragStartDepth)
                     
-                    // 摄像机的前向量（从摄像机指向目标点）
-                    val camForwardX = -(cos(radX) * cos(radY)).toFloat()
-                    val camForwardY = -sin(radX).toFloat()
-                    val camForwardZ = -(cos(radX) * sin(radY)).toFloat()
-                    
-                    // 摄像机的右向量（屏幕右方向对应的世界坐标方向）
-                    // 右向量 = 前向量 × 上向量(0,1,0)
-                    val camRightX = -camForwardZ
-                    val camRightY = 0.0f
-                    val camRightZ = camForwardX
-                    
-                    // 摄像机的上向量（在相机平面内，垂直于右向量和前向量）
-                    // 上向量 = 右向量 × 前向量
-                    val camUpX = camRightY * camForwardZ - camRightZ * camForwardY
-                    val camUpY = camRightZ * camForwardX - camRightX * camForwardZ
-                    val camUpZ = camRightX * camForwardY - camRightY * camForwardX
-                    
-                    // 屏幕坐标转换为世界坐标的移动
-                    // 屏幕右移 -> 沿摄像机右向量移动
-                    // 屏幕上移 -> 沿摄像机上向量移动
-                    val screenRight = deltaX
-                    val screenUp = -deltaY // 屏幕坐标Y轴向下为正，需要反转
-                    
-                    // 计算在世界坐标系中的移动量
-                    val worldDeltaX = (screenRight * camRightX + screenUp * camUpX) * adjustedSensitivity
-                    val worldDeltaY = (screenRight * camRightY + screenUp * camUpY) * adjustedSensitivity
-                    val worldDeltaZ = (screenRight * camRightZ + screenUp * camUpZ) * adjustedSensitivity
-                    
-                    // 更新小方块位置
-                    smallBoxX += worldDeltaX
-                    smallBoxY += worldDeltaY
-                    smallBoxZ += worldDeltaZ
+                    if (startWorldPos != null && currentWorldPos != null) {
+                        // 计算世界坐标的偏移量
+                        val worldDeltaX = currentWorldPos[0] - startWorldPos[0]
+                        val worldDeltaY = currentWorldPos[1] - startWorldPos[1]
+                        val worldDeltaZ = currentWorldPos[2] - startWorldPos[2]
+                        
+                        // 基于初始位置和偏移量更新小方块位置
+                        smallBoxX = smallBoxStartX + worldDeltaX
+                        smallBoxY = smallBoxStartY + worldDeltaY
+                        smallBoxZ = smallBoxStartZ + worldDeltaZ
+                    }
 
                     updateSmallBoxPosition()
 
                     Log.d(
                         TAG,
-                        "Moving small box to: ($smallBoxX, $smallBoxY, $smallBoxZ), sensitivity: $adjustedSensitivity"
+                        "Moving small box to: ($smallBoxX, $smallBoxY, $smallBoxZ)"
                     )
                 } else if (isDragging) {
                     // 旋转摄像机
@@ -990,6 +975,93 @@ class MainActivity : Activity() {
 
         // 最后销毁引擎
         engine.destroy()
+    }
+
+    /**
+     * 计算世界坐标在相机空间中的深度值
+     * @param worldX 世界坐标X
+     * @param worldY 世界坐标Y
+     * @param worldZ 世界坐标Z
+     * @return 相机空间中的深度值
+     */
+    private fun calculateDepthFromWorldPosition(worldX: Float, worldY: Float, worldZ: Float): Float {
+        val viewMatrix = DoubleArray(16)
+        camera.getViewMatrix(viewMatrix)
+        val viewMatrixFloat = viewMatrix.map { it.toFloat() }.toFloatArray()
+        
+        val worldPos = floatArrayOf(worldX, worldY, worldZ, 1.0f)
+        val viewPos = FloatArray(4)
+        android.opengl.Matrix.multiplyMV(viewPos, 0, viewMatrixFloat, 0, worldPos, 0)
+        
+        return -viewPos[2] // 相机空间中的Z深度（负值转正值）
+    }
+
+    /**
+     * 将屏幕坐标转换为相机平面上的世界坐标
+     * @param screenX 屏幕X坐标
+     * @param screenY 屏幕Y坐标
+     * @param depth 指定的深度值，如果为null则使用小方块当前深度
+     * @return 世界坐标数组[x, y, z]，如果转换失败返回null
+     */
+    private fun screenToWorldPosition(screenX: Float, screenY: Float, depth: Float? = null): FloatArray? {
+        try {
+            // 获取视图矩阵和投影矩阵
+            val viewMatrix = DoubleArray(16)
+            val projectionMatrix = DoubleArray(16)
+            camera.getViewMatrix(viewMatrix)
+            camera.getProjectionMatrix(projectionMatrix)
+
+            // 转换为Float数组
+            val viewMatrixFloat = viewMatrix.map { it.toFloat() }.toFloatArray()
+            val projectionMatrixFloat = projectionMatrix.map { it.toFloat() }.toFloatArray()
+
+            // 计算视图投影矩阵的逆矩阵
+            val vpMatrix = FloatArray(16)
+            val vpInverseMatrix = FloatArray(16)
+            android.opengl.Matrix.multiplyMM(vpMatrix, 0, projectionMatrixFloat, 0, viewMatrixFloat, 0)
+            
+            if (!android.opengl.Matrix.invertM(vpInverseMatrix, 0, vpMatrix, 0)) {
+                return null // 矩阵不可逆
+            }
+
+            // 将屏幕坐标转换为NDC坐标
+            val ndcX = (screenX / surfaceView.width) * 2.0f - 1.0f
+            val ndcY = -((screenY / surfaceView.height) * 2.0f - 1.0f) // Y轴翻转
+
+            // 使用指定的深度值或计算当前小方块的深度
+            val useDepth = depth ?: run {
+                val currentWorldPos = floatArrayOf(smallBoxX, smallBoxY, smallBoxZ, 1.0f)
+                val currentViewPos = FloatArray(4)
+                android.opengl.Matrix.multiplyMV(currentViewPos, 0, viewMatrixFloat, 0, currentWorldPos, 0)
+                -currentViewPos[2] // 相机空间中的Z深度（负值转正值）
+            }
+
+            // 将深度转换为NDC空间的Z值
+            val nearPlane = 0.1f
+            val farPlane = 20.0f
+            val ndcZ = (farPlane + nearPlane) / (farPlane - nearPlane) - (2.0f * farPlane * nearPlane) / ((farPlane - nearPlane) * useDepth)
+
+            // 构造NDC坐标
+            val ndcPos = floatArrayOf(ndcX, ndcY, ndcZ, 1.0f)
+
+            // 使用逆矩阵将NDC坐标转换回世界坐标
+            val worldPos = FloatArray(4)
+            android.opengl.Matrix.multiplyMV(worldPos, 0, vpInverseMatrix, 0, ndcPos, 0)
+
+            // 透视除法
+            if (worldPos[3] != 0.0f) {
+                return floatArrayOf(
+                    worldPos[0] / worldPos[3],
+                    worldPos[1] / worldPos[3],
+                    worldPos[2] / worldPos[3]
+                )
+            }
+
+            return null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error converting screen to world position", e)
+            return null
+        }
     }
 
     // 帧回调，在每一帧被 Choreographer 调用
