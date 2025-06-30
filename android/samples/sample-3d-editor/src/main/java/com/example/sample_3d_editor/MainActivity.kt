@@ -37,23 +37,6 @@ import java.nio.ByteOrder
 import kotlin.math.cos
 import kotlin.math.sin
 
-// MainActivity 是 Filament 3D 编辑器的主界面，负责初始化 UI、Filament 渲染环境、摄像机与场景，并处理用户交互。
-// Filament 是一个实时渲染引擎，提供高效的图形渲染能力。
-// 业务流程包括：
-// 1. 初始化 UI 组件，包括 SurfaceView 和 TextView。
-// 2. 设置 SurfaceView 以显示 3D 内容，并添加触摸事件监听器以控制摄像机。
-// 3. 初始化 Filament 引擎及其相关组件，如渲染器、场景、视图和摄像机。
-// 4. 创建几何体（立方体和坐标轴）并将其添加到场景中。
-// 5. 设置光照以增强视觉效果。
-// 6. 通过触摸事件处理用户交互，允许用户旋转视图和切换视角。
-// Filament 用法：
-// - 使用 Engine.create() 创建渲染引擎。
-// - 使用 Renderer 渲染场景。
-// - 使用 Scene 和 View 管理 3D 场景和视图。
-// - 使用 Camera 设置摄像机参数和视角。
-// - 使用 VertexBuffer 和 IndexBuffer 创建几何体。
-// - 使用 RenderableManager 管理可渲染实体。
-// - 使用 LightManager 设置光照参数。
 class MainActivity : Activity() {
     // 静态代码块，确保在使用 Filament API 前完成初始化。
     // 这是 Filament 的强制要求，必须在使用任何 Filament 功能之前调用。
@@ -88,6 +71,8 @@ class MainActivity : Activity() {
     private lateinit var axisIndexBuffer: IndexBuffer // 存储坐标轴索引数据的缓冲区
     private lateinit var smallBoxVertexBuffer: VertexBuffer // 存储小方块顶点数据的缓冲区
     private lateinit var smallBoxIndexBuffer: IndexBuffer // 存储小方块索引数据的缓冲区
+    private lateinit var axisLabelVertexBuffer: VertexBuffer // 存储坐标轴标签顶点数据的缓冲区
+    private lateinit var axisLabelIndexBuffer: IndexBuffer // 存储坐标轴标签索引数据的缓冲区
 
     // 实体（Entities）
     // 实体是场景中的基本对象，通过关联组件（如 Renderable、Transform）来定义其行为和外观。
@@ -98,7 +83,13 @@ class MainActivity : Activity() {
     private var axisRenderable = 0 // 坐标轴的可渲染实体
 
     @Entity
-    private var axisLabelRenderable = 0 // 坐标轴标识的可渲染实体
+    private var xLabelRenderable = 0 // X轴标签的可渲染实体
+    
+    @Entity
+    private var yLabelRenderable = 0 // Y轴标签的可渲染实体
+    
+    @Entity
+    private var zLabelRenderable = 0 // Z轴标签的可渲染实体
 
     @Entity
     private var smallBoxRenderable = 0 // 小方块的可渲染实体
@@ -127,8 +118,8 @@ class MainActivity : Activity() {
     private var cameraAngleY = 45.0f
 
     // 小方块控制参数
-    private var smallBoxX = 2.0f // 小方块的X坐标
-    private var smallBoxY = 1.0f // 小方块的Y坐标
+    private var smallBoxX = 0.0f // 小方块的X坐标
+    private var smallBoxY = 0.0f // 小方块的Y坐标
     private var smallBoxZ = 0.0f // 小方块的Z坐标
     private var isSmallBoxSelected = false // 小方块是否被选中
     private var isDraggingSmallBox = false // 是否正在拖拽小方块
@@ -220,6 +211,8 @@ class MainActivity : Activity() {
         createAxisMesh()
         // 创建小方块的网格数据
         createSmallBoxMesh()
+        // 创建坐标轴标签的网格数据
+        createAxisLabelMesh()
         // 创建可渲染实体并将其添加到场景中
         createRenderables()
         // 设置场景光照
@@ -387,6 +380,111 @@ class MainActivity : Activity() {
         smallBoxIndexBuffer.setBuffer(engine, indexData)
     }
 
+    // 创建坐标轴标签的网格数据
+    private fun createAxisLabelMesh() {
+        val floatSize = 4
+        val vertexSize = 3 * floatSize + 4 * floatSize // 每个顶点的大小（位置 + 颜色）
+        val labelSize = 0.2f // 标签的大小
+        val axisLength = 3.0f // 坐标轴长度，与createAxisMesh中的值保持一致
+        val labelOffset = 0.3f // 标签相对于轴端点的偏移
+
+        // 定义带颜色的顶点数据结构
+        data class ColorVertex(
+            val x: Float,
+            val y: Float,
+            val z: Float,
+            val r: Float,
+            val g: Float,
+            val b: Float,
+            val a: Float
+        )
+
+        fun ByteBuffer.put(v: ColorVertex): ByteBuffer {
+            putFloat(v.x)
+            putFloat(v.y)
+            putFloat(v.z)
+            putFloat(v.r)
+            putFloat(v.g)
+            putFloat(v.b)
+            putFloat(v.a)
+            return this
+        }
+
+        // 创建字母"X"的线段（红色）
+        val xVertexData = ByteBuffer.allocate(4 * vertexSize)
+            .order(ByteOrder.nativeOrder())
+            // X字母的两条对角线
+            .put(ColorVertex(axisLength + labelOffset - labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f))
+            .put(ColorVertex(axisLength + labelOffset + labelSize, labelSize, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f))
+            .put(ColorVertex(axisLength + labelOffset - labelSize, labelSize, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f))
+            .put(ColorVertex(axisLength + labelOffset + labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f))
+            .flip()
+
+        // 创建字母"Y"的线段（绿色）
+        val yVertexData = ByteBuffer.allocate(6 * vertexSize)
+            .order(ByteOrder.nativeOrder())
+            // Y字母的三条线段
+            .put(ColorVertex(-labelSize, axisLength + labelOffset + labelSize, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(ColorVertex(0.0f, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(ColorVertex(labelSize, axisLength + labelOffset + labelSize, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(ColorVertex(0.0f, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(ColorVertex(0.0f, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(ColorVertex(0.0f, axisLength + labelOffset - labelSize, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
+            .flip()
+
+        // 创建字母"Z"的线段（蓝色）
+        val zVertexData = ByteBuffer.allocate(6 * vertexSize)
+            .order(ByteOrder.nativeOrder())
+            // Z字母的三条线段
+            .put(ColorVertex(-labelSize, labelSize, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 1.0f))
+            .put(ColorVertex(labelSize, labelSize, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 1.0f))
+            .put(ColorVertex(labelSize, labelSize, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 1.0f))
+            .put(ColorVertex(-labelSize, -labelSize, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 1.0f))
+            .put(ColorVertex(-labelSize, -labelSize, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 1.0f))
+            .put(ColorVertex(labelSize, -labelSize, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 1.0f))
+            .flip()
+
+        // 合并所有标签的顶点数据
+        val totalVertexData = ByteBuffer.allocate(16 * vertexSize)
+            .order(ByteOrder.nativeOrder())
+            .put(xVertexData as ByteBuffer)
+            .put(yVertexData as ByteBuffer)
+            .put(zVertexData as ByteBuffer)
+            .flip()
+
+        // 创建标签的 VertexBuffer
+        axisLabelVertexBuffer = VertexBuffer.Builder()
+            .bufferCount(1)
+            .vertexCount(16)
+            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, vertexSize)
+            .attribute(VertexAttribute.COLOR, 0, AttributeType.FLOAT4, 3 * floatSize, vertexSize)
+            .build(engine)
+        axisLabelVertexBuffer.setBufferAt(engine, 0, totalVertexData)
+
+        // 创建标签的索引数据
+        val indexData = ByteBuffer.allocate(16 * 2)
+            .order(ByteOrder.nativeOrder())
+            // X标签的索引
+            .putShort(0).putShort(1)
+            .putShort(2).putShort(3)
+            // Y标签的索引
+            .putShort(4).putShort(5)
+            .putShort(6).putShort(7)
+            .putShort(8).putShort(9)
+            // Z标签的索引
+            .putShort(10).putShort(11)
+            .putShort(12).putShort(13)
+            .putShort(14).putShort(15)
+            .flip()
+
+        // 创建标签的 IndexBuffer
+        axisLabelIndexBuffer = IndexBuffer.Builder()
+            .indexCount(16)
+            .bufferType(IndexBuffer.Builder.IndexType.USHORT)
+            .build(engine)
+        axisLabelIndexBuffer.setBuffer(engine, indexData)
+    }
+
     // 创建可渲染实体并将其添加到场景中
     private fun createRenderables() {
 
@@ -414,6 +512,28 @@ class MainActivity : Activity() {
             .geometry(0, PrimitiveType.TRIANGLES, smallBoxVertexBuffer, smallBoxIndexBuffer, 0, 36)
             .build(engine, smallBoxRenderable)
         scene.addEntity(smallBoxRenderable)
+
+        // 创建坐标轴标签的可渲染实体
+        xLabelRenderable = EntityManager.get().create()
+        RenderableManager.Builder(1)
+            .boundingBox(Box(-4.0f, -4.0f, -4.0f, 4.0f, 4.0f, 4.0f))
+            .geometry(0, PrimitiveType.LINES, axisLabelVertexBuffer, axisLabelIndexBuffer, 0, 4) // X标签的2条线，4个索引
+            .build(engine, xLabelRenderable)
+        scene.addEntity(xLabelRenderable)
+
+        yLabelRenderable = EntityManager.get().create()
+        RenderableManager.Builder(1)
+            .boundingBox(Box(-4.0f, -4.0f, -4.0f, 4.0f, 4.0f, 4.0f))
+            .geometry(0, PrimitiveType.LINES, axisLabelVertexBuffer, axisLabelIndexBuffer, 4, 6) // Y标签的3条线，6个索引
+            .build(engine, yLabelRenderable)
+        scene.addEntity(yLabelRenderable)
+
+        zLabelRenderable = EntityManager.get().create()
+        RenderableManager.Builder(1)
+            .boundingBox(Box(-4.0f, -4.0f, -4.0f, 4.0f, 4.0f, 4.0f))
+            .geometry(0, PrimitiveType.LINES, axisLabelVertexBuffer, axisLabelIndexBuffer, 10, 6) // Z标签的3条线，6个索引
+            .build(engine, zLabelRenderable)
+        scene.addEntity(zLabelRenderable)
 
         // 设置小方块的初始位置
         updateSmallBoxPosition()
@@ -519,14 +639,42 @@ class MainActivity : Activity() {
                     val deltaX = event.x - lastX
                     val deltaY = event.y - lastY
 
-                    // 将屏幕坐标转换为世界坐标的移动
-                    val sensitivity = 0.01f
-                    smallBoxX += deltaX * sensitivity
-                    smallBoxY -= deltaY * sensitivity // Y轴反向
+                    // 根据摄像机距离和视角动态计算敏感度
+                    // 摄像机越远，移动敏感度应该越高
+                    val baseSensitivity = 0.005f
+                    val distanceFactor = cameraDistance / 8.0f // 8.0f是默认距离
+                    val sensitivity = baseSensitivity * distanceFactor
+
+                    // 考虑屏幕尺寸的影响
+                    val screenSizeFactor = kotlin.math.min(surfaceView.width, surfaceView.height) / 1000.0f
+                    val adjustedSensitivity = sensitivity * screenSizeFactor
+                    
+                    // 根据摄像机的旋转角度转换移动方向
+                    // 将屏幕坐标的移动转换到世界坐标系中
+                    val radY = Math.toRadians(cameraAngleY.toDouble())
+                    val cosY = cos(radY).toFloat()
+                    val sinY = sin(radY).toFloat()
+                    
+                    // 屏幕坐标系：右为正X，下为正Y
+                    // 世界坐标系：右为正X，前为负Z，上为正Y
+                    // 修正映射关系：屏幕右移对应世界X轴，屏幕下移对应世界Z轴
+                    val screenRight = deltaX
+                    val screenDown = -deltaY // 反转Y轴，屏幕向上移动对应世界向前移动
+                    
+                    // 应用摄像机Y轴旋转的逆变换
+                    val worldDeltaX = screenRight * cosY + screenDown * sinY
+                    val worldDeltaZ = -screenRight * sinY + screenDown * cosY
+                    
+                    smallBoxX += worldDeltaX * adjustedSensitivity
+                    smallBoxZ += worldDeltaZ * adjustedSensitivity
+                    // Y轴保持不变，因为我们只处理水平面的移动
 
                     updateSmallBoxPosition()
 
-                    Log.d(TAG, "Moving small box to: ($smallBoxX, $smallBoxY, $smallBoxZ)")
+                    Log.d(
+                        TAG,
+                        "Moving small box to: ($smallBoxX, $smallBoxY, $smallBoxZ), sensitivity: $adjustedSensitivity"
+                    )
                 } else if (isDragging) {
                     // 旋转摄像机
                     val deltaX = event.x - lastX
@@ -644,11 +792,15 @@ class MainActivity : Activity() {
         engine.destroyEntity(light)
         engine.destroyEntity(cubeRenderable)
         engine.destroyEntity(axisRenderable)
-        engine.destroyEntity(axisLabelRenderable)
+        engine.destroyEntity(xLabelRenderable)
+        engine.destroyEntity(yLabelRenderable)
+        engine.destroyEntity(zLabelRenderable)
         engine.destroyEntity(smallBoxRenderable)
         engine.destroyRenderer(renderer)
         engine.destroyVertexBuffer(axisVertexBuffer)
         engine.destroyIndexBuffer(axisIndexBuffer)
+        engine.destroyVertexBuffer(axisLabelVertexBuffer)
+        engine.destroyIndexBuffer(axisLabelIndexBuffer)
         engine.destroyVertexBuffer(smallBoxVertexBuffer)
         engine.destroyIndexBuffer(smallBoxIndexBuffer)
         engine.destroyView(view)
@@ -660,7 +812,9 @@ class MainActivity : Activity() {
         entityManager.destroy(light)
         entityManager.destroy(cubeRenderable)
         entityManager.destroy(axisRenderable)
-        entityManager.destroy(axisLabelRenderable)
+        entityManager.destroy(xLabelRenderable)
+        entityManager.destroy(yLabelRenderable)
+        entityManager.destroy(zLabelRenderable)
         entityManager.destroy(smallBoxRenderable)
         entityManager.destroy(camera.entity)
 
