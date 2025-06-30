@@ -570,46 +570,53 @@ class MainActivity : Activity() {
         val projectionMatrixFloat = projectionMatrix.map { it.toFloat() }.toFloatArray()
         val viewMatrixFloat = viewMatrix.map { it.toFloat() }.toFloatArray()
 
-        // 使用简化的投影计算
-        val mvpMatrix = FloatArray(16)
-        android.opengl.Matrix.multiplyMM(mvpMatrix, 0, projectionMatrixFloat, 0, viewMatrixFloat, 0)
+        // 获取小方块的模型矩阵
+        val tm = engine.transformManager
+        val transform = tm.getInstance(smallBoxRenderable)
+        val modelMatrix = FloatArray(16)
+        tm.getTransform(transform, modelMatrix)
 
-        val worldPos4 =
-            doubleArrayOf(smallBoxX.toDouble(), smallBoxY.toDouble(), smallBoxZ.toDouble(), 1.0)
-        val clipPos = DoubleArray(4)
+        // 计算 Model-View 矩阵
+        val mvMatrix = FloatArray(16)
+        android.opengl.Matrix.multiplyMM(mvMatrix, 0, viewMatrixFloat, 0, modelMatrix, 0)
+
+        // 计算 Model-View-Projection 矩阵
+        val mvpMatrix = FloatArray(16)
+        android.opengl.Matrix.multiplyMM(mvpMatrix, 0, projectionMatrixFloat, 0, mvMatrix, 0)
+
+        // 小方块在模型空间的中心点（原点）
+        val worldPos4 = floatArrayOf(0.0f, 0.0f, 0.0f, 1.0f)
+        val clipPos = FloatArray(4)
 
         // 矩阵乘法：MVP * worldPos
-        for (i in 0..3) {
-            clipPos[i] = mvpMatrix[i * 4] * worldPos4[0] +
-                mvpMatrix[i * 4 + 1] * worldPos4[1] +
-                mvpMatrix[i * 4 + 2] * worldPos4[2] +
-                mvpMatrix[i * 4 + 3] * worldPos4[3]
-        }
+        android.opengl.Matrix.multiplyMV(clipPos, 0, mvpMatrix, 0, worldPos4, 0)
 
         // 透视除法
-        if (clipPos[3] != 0.0) {
+        if (clipPos[3] != 0.0f && clipPos[3] > 0.0f) { // 确保在摄像机前方
             val ndcX = clipPos[0] / clipPos[3]
             val ndcY = clipPos[1] / clipPos[3]
 
-            // 转换到屏幕坐标
-            val projectedX = (ndcX + 1.0) * 0.5 * surfaceView.width
-            val projectedY = (1.0 - ndcY) * 0.5 * surfaceView.height
+            // 检查是否在视锥体内
+            if (ndcX >= -1.0f && ndcX <= 1.0f && ndcY >= -1.0f && ndcY <= 1.0f) {
+                // 转换到屏幕坐标
+                val projectedX = (ndcX + 1.0f) * 0.5f * surfaceView.width
+                val projectedY = (1.0f - ndcY) * 0.5f * surfaceView.height
 
-            // 检查点击是否在小方块附近（使用一个较大的点击区域）
-            val clickRadius = 50.0
-            val distance = kotlin.math.sqrt(
-                (screenX - projectedX) * (screenX - projectedX) +
-                    (screenY - projectedY) * (screenY - projectedY)
-            )
+                // 检查点击是否在小方块附近
+                val clickRadius = 80.0f // 增大点击区域
+                val distance = kotlin.math.sqrt(
+                    (screenX - projectedX) * (screenX - projectedX) +
+                        (screenY - projectedY) * (screenY - projectedY)
+                )
 
-            Log.d(
-                TAG,
-                "Small box screen pos: ($projectedX, $projectedY), click: ($screenX, $screenY), distance: $distance"
-            )
+                Log.d(
+                    TAG,
+                    "Small box screen pos: ($projectedX, $projectedY), click: ($screenX, $screenY), distance: $distance, NDC: ($ndcX, $ndcY)"
+                )
 
-            return distance < clickRadius
+                return distance < clickRadius
+            }
         }
-
         return false
     }
 
