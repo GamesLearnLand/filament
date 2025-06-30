@@ -84,10 +84,10 @@ class MainActivity : Activity() {
 
     @Entity
     private var xLabelRenderable = 0 // X轴标签的可渲染实体
-    
+
     @Entity
     private var yLabelRenderable = 0 // Y轴标签的可渲染实体
-    
+
     @Entity
     private var zLabelRenderable = 0 // Z轴标签的可渲染实体
 
@@ -414,34 +414,164 @@ class MainActivity : Activity() {
         val xVertexData = ByteBuffer.allocate(4 * vertexSize)
             .order(ByteOrder.nativeOrder())
             // X字母的两条对角线
-            .put(ColorVertex(axisLength + labelOffset - labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f))
-            .put(ColorVertex(axisLength + labelOffset + labelSize, labelSize, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f))
-            .put(ColorVertex(axisLength + labelOffset - labelSize, labelSize, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f))
-            .put(ColorVertex(axisLength + labelOffset + labelSize, -labelSize, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f))
+            .put(
+                ColorVertex(
+                    axisLength + labelOffset - labelSize,
+                    -labelSize,
+                    0.0f,
+                    1.0f,
+                    0.0f,
+                    0.0f,
+                    1.0f
+                )
+            )
+            .put(
+                ColorVertex(
+                    axisLength + labelOffset + labelSize,
+                    labelSize,
+                    0.0f,
+                    1.0f,
+                    0.0f,
+                    0.0f,
+                    1.0f
+                )
+            )
+            .put(
+                ColorVertex(
+                    axisLength + labelOffset - labelSize,
+                    labelSize,
+                    0.0f,
+                    1.0f,
+                    0.0f,
+                    0.0f,
+                    1.0f
+                )
+            )
+            .put(
+                ColorVertex(
+                    axisLength + labelOffset + labelSize,
+                    -labelSize,
+                    0.0f,
+                    1.0f,
+                    0.0f,
+                    0.0f,
+                    1.0f
+                )
+            )
             .flip()
 
         // 创建字母"Y"的线段（绿色）
         val yVertexData = ByteBuffer.allocate(6 * vertexSize)
             .order(ByteOrder.nativeOrder())
             // Y字母的三条线段
-            .put(ColorVertex(-labelSize, axisLength + labelOffset + labelSize, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(
+                ColorVertex(
+                    -labelSize,
+                    axisLength + labelOffset + labelSize,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    0.0f,
+                    1.0f
+                )
+            )
             .put(ColorVertex(0.0f, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
-            .put(ColorVertex(labelSize, axisLength + labelOffset + labelSize, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(
+                ColorVertex(
+                    labelSize,
+                    axisLength + labelOffset + labelSize,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    0.0f,
+                    1.0f
+                )
+            )
             .put(ColorVertex(0.0f, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
             .put(ColorVertex(0.0f, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
-            .put(ColorVertex(0.0f, axisLength + labelOffset - labelSize, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f))
+            .put(
+                ColorVertex(
+                    0.0f,
+                    axisLength + labelOffset - labelSize,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    0.0f,
+                    1.0f
+                )
+            )
             .flip()
 
         // 创建字母"Z"的线段（蓝色）
         val zVertexData = ByteBuffer.allocate(6 * vertexSize)
             .order(ByteOrder.nativeOrder())
             // Z字母的三条线段
-            .put(ColorVertex(-labelSize, labelSize, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 1.0f))
-            .put(ColorVertex(labelSize, labelSize, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 1.0f))
-            .put(ColorVertex(labelSize, labelSize, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 1.0f))
-            .put(ColorVertex(-labelSize, -labelSize, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 1.0f))
-            .put(ColorVertex(-labelSize, -labelSize, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 1.0f))
-            .put(ColorVertex(labelSize, -labelSize, axisLength + labelOffset, 0.0f, 0.0f, 1.0f, 1.0f))
+            .put(
+                ColorVertex(
+                    -labelSize,
+                    labelSize,
+                    axisLength + labelOffset,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    1.0f
+                )
+            )
+            .put(
+                ColorVertex(
+                    labelSize,
+                    labelSize,
+                    axisLength + labelOffset,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    1.0f
+                )
+            )
+            .put(
+                ColorVertex(
+                    labelSize,
+                    labelSize,
+                    axisLength + labelOffset,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    1.0f
+                )
+            )
+            .put(
+                ColorVertex(
+                    -labelSize,
+                    -labelSize,
+                    axisLength + labelOffset,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    1.0f
+                )
+            )
+            .put(
+                ColorVertex(
+                    -labelSize,
+                    -labelSize,
+                    axisLength + labelOffset,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    1.0f
+                )
+            )
+            .put(
+                ColorVertex(
+                    labelSize,
+                    -labelSize,
+                    axisLength + labelOffset,
+                    0.0f,
+                    0.0f,
+                    1.0f,
+                    1.0f
+                )
+            )
             .flip()
 
         // 合并所有标签的顶点数据
@@ -517,21 +647,42 @@ class MainActivity : Activity() {
         xLabelRenderable = EntityManager.get().create()
         RenderableManager.Builder(1)
             .boundingBox(Box(-4.0f, -4.0f, -4.0f, 4.0f, 4.0f, 4.0f))
-            .geometry(0, PrimitiveType.LINES, axisLabelVertexBuffer, axisLabelIndexBuffer, 0, 4) // X标签的2条线，4个索引
+            .geometry(
+                0,
+                PrimitiveType.LINES,
+                axisLabelVertexBuffer,
+                axisLabelIndexBuffer,
+                0,
+                4
+            ) // X标签的2条线，4个索引
             .build(engine, xLabelRenderable)
         scene.addEntity(xLabelRenderable)
 
         yLabelRenderable = EntityManager.get().create()
         RenderableManager.Builder(1)
             .boundingBox(Box(-4.0f, -4.0f, -4.0f, 4.0f, 4.0f, 4.0f))
-            .geometry(0, PrimitiveType.LINES, axisLabelVertexBuffer, axisLabelIndexBuffer, 4, 6) // Y标签的3条线，6个索引
+            .geometry(
+                0,
+                PrimitiveType.LINES,
+                axisLabelVertexBuffer,
+                axisLabelIndexBuffer,
+                4,
+                6
+            ) // Y标签的3条线，6个索引
             .build(engine, yLabelRenderable)
         scene.addEntity(yLabelRenderable)
 
         zLabelRenderable = EntityManager.get().create()
         RenderableManager.Builder(1)
             .boundingBox(Box(-4.0f, -4.0f, -4.0f, 4.0f, 4.0f, 4.0f))
-            .geometry(0, PrimitiveType.LINES, axisLabelVertexBuffer, axisLabelIndexBuffer, 10, 6) // Z标签的3条线，6个索引
+            .geometry(
+                0,
+                PrimitiveType.LINES,
+                axisLabelVertexBuffer,
+                axisLabelIndexBuffer,
+                10,
+                6
+            ) // Z标签的3条线，6个索引
             .build(engine, zLabelRenderable)
         scene.addEntity(zLabelRenderable)
 
@@ -603,6 +754,10 @@ class MainActivity : Activity() {
         matrix[13] = smallBoxY
         matrix[14] = smallBoxZ
 
+        Log.d(TAG, "X: ${matrix[12]}")
+        Log.d(TAG, "Y: ${matrix[13]}")
+        Log.d(TAG, "Z: ${matrix[14]}")
+
         tm.setTransform(transform, matrix)
     }
 
@@ -627,8 +782,6 @@ class MainActivity : Activity() {
                 } else {
                     isDragging = true
                     isSmallBoxSelected = false
-                    // 检查是否点击了坐标轴端点以切换视角
-//                    checkAxisClick(event.x, event.y)
                 }
                 return true
             }
@@ -648,26 +801,43 @@ class MainActivity : Activity() {
                     // 考虑屏幕尺寸的影响
                     val screenSizeFactor = kotlin.math.min(surfaceView.width, surfaceView.height) / 1000.0f
                     val adjustedSensitivity = sensitivity * screenSizeFactor
-                    
-                    // 根据摄像机的旋转角度转换移动方向
-                    // 将屏幕坐标的移动转换到世界坐标系中
+
+                    // 计算摄像机的视角向量和右向量，用于在相机平面内移动
+                    val radX = Math.toRadians(cameraAngleX.toDouble())
                     val radY = Math.toRadians(cameraAngleY.toDouble())
-                    val cosY = cos(radY).toFloat()
-                    val sinY = sin(radY).toFloat()
                     
-                    // 屏幕坐标系：右为正X，下为正Y
-                    // 世界坐标系：右为正X，前为负Z，上为正Y
-                    // 修正映射关系：屏幕右移对应世界X轴，屏幕下移对应世界Z轴
+                    // 摄像机的前向量（从摄像机指向目标点）
+                    val camForwardX = -(cos(radX) * cos(radY)).toFloat()
+                    val camForwardY = -sin(radX).toFloat()
+                    val camForwardZ = -(cos(radX) * sin(radY)).toFloat()
+                    
+                    // 摄像机的右向量（屏幕右方向对应的世界坐标方向）
+                    // 右向量 = 前向量 × 上向量(0,1,0)
+                    val camRightX = -camForwardZ
+                    val camRightY = 0.0f
+                    val camRightZ = camForwardX
+                    
+                    // 摄像机的上向量（在相机平面内，垂直于右向量和前向量）
+                    // 上向量 = 右向量 × 前向量
+                    val camUpX = camRightY * camForwardZ - camRightZ * camForwardY
+                    val camUpY = camRightZ * camForwardX - camRightX * camForwardZ
+                    val camUpZ = camRightX * camForwardY - camRightY * camForwardX
+                    
+                    // 屏幕坐标转换为世界坐标的移动
+                    // 屏幕右移 -> 沿摄像机右向量移动
+                    // 屏幕上移 -> 沿摄像机上向量移动
                     val screenRight = deltaX
-                    val screenDown = -deltaY // 反转Y轴，屏幕向上移动对应世界向前移动
+                    val screenUp = -deltaY // 屏幕坐标Y轴向下为正，需要反转
                     
-                    // 应用摄像机Y轴旋转的逆变换
-                    val worldDeltaX = screenRight * cosY + screenDown * sinY
-                    val worldDeltaZ = -screenRight * sinY + screenDown * cosY
+                    // 计算在世界坐标系中的移动量
+                    val worldDeltaX = (screenRight * camRightX + screenUp * camUpX) * adjustedSensitivity
+                    val worldDeltaY = (screenRight * camRightY + screenUp * camUpY) * adjustedSensitivity
+                    val worldDeltaZ = (screenRight * camRightZ + screenUp * camUpZ) * adjustedSensitivity
                     
-                    smallBoxX += worldDeltaX * adjustedSensitivity
-                    smallBoxZ += worldDeltaZ * adjustedSensitivity
-                    // Y轴保持不变，因为我们只处理水平面的移动
+                    // 更新小方块位置
+                    smallBoxX += worldDeltaX
+                    smallBoxY += worldDeltaY
+                    smallBoxZ += worldDeltaZ
 
                     updateSmallBoxPosition()
 
