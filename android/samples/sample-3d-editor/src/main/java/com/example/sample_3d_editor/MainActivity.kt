@@ -104,6 +104,8 @@ class MainActivity : Activity() {
     private lateinit var axisIndexBuffer: IndexBuffer // 存储坐标轴索引数据的缓冲区
     private lateinit var axisLabelVertexBuffer: VertexBuffer // 存储坐标轴标识的顶点数据缓冲区
     private lateinit var axisLabelIndexBuffer: IndexBuffer // 存储坐标轴标识的索引数据缓冲区
+    private lateinit var smallBoxVertexBuffer: VertexBuffer // 存储小方块顶点数据的缓冲区
+    private lateinit var smallBoxIndexBuffer: IndexBuffer // 存储小方块索引数据的缓冲区
 
     // 实体（Entities）
     // 实体是场景中的基本对象，通过关联组件（如 Renderable、Transform）来定义其行为和外观。
@@ -115,6 +117,9 @@ class MainActivity : Activity() {
 
     @Entity
     private var axisLabelRenderable = 0 // 坐标轴标识的可渲染实体
+
+    @Entity
+    private var smallBoxRenderable = 0 // 小方块的可渲染实体
 
     @Entity
     private var light = 0 // 光源实体
@@ -142,6 +147,13 @@ class MainActivity : Activity() {
 
     private val cameraMatrix = FloatArray(16) // 摄像机的变换矩阵
     private val viewMatrix = FloatArray(16) // 视图矩阵
+
+    // 小方块控制参数
+    private var smallBoxX = 2.0f // 小方块的X坐标
+    private var smallBoxY = 1.0f // 小方块的Y坐标
+    private var smallBoxZ = 0.0f // 小方块的Z坐标
+    private var isSmallBoxSelected = false // 小方块是否被选中
+    private var isDraggingSmallBox = false // 是否正在拖拽小方块
 
     // Activity 的 onCreate 方法，是应用的入口点。
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -255,6 +267,8 @@ class MainActivity : Activity() {
         createAxisMesh()
         // 创建坐标轴标识的网格数据
         createAxisLabelMesh()
+        // 创建小方块的网格数据
+        createSmallBoxMesh()
         // 创建可渲染实体并将其添加到场景中
         createRenderables()
         // 设置场景光照
@@ -595,6 +609,92 @@ class MainActivity : Activity() {
         axisLabelIndexBuffer.setBuffer(engine, indexData)
     }
 
+    // 创建小方块的网格数据
+    private fun createSmallBoxMesh() {
+        val floatSize = 4
+        val vertexSize = 3 * floatSize + 4 * floatSize // 每个顶点的大小（位置 + 颜色）
+        val boxSize = 0.3f // 小方块的大小
+
+        // 定义带颜色的顶点数据结构
+        data class ColorVertex(
+            val x: Float,
+            val y: Float,
+            val z: Float,
+            val r: Float,
+            val g: Float,
+            val b: Float,
+            val a: Float
+        )
+
+        fun ByteBuffer.put(v: ColorVertex): ByteBuffer {
+            putFloat(v.x)
+            putFloat(v.y)
+            putFloat(v.z)
+            putFloat(v.r)
+            putFloat(v.g)
+            putFloat(v.b)
+            putFloat(v.a)
+            return this
+        }
+
+        // 创建小方块的顶点数据（橙色）
+        val smallBoxVertexData = ByteBuffer.allocate(8 * vertexSize)
+            .order(ByteOrder.nativeOrder())
+            // 8个顶点，橙色
+            .put(ColorVertex(-boxSize, -boxSize, -boxSize, 1.0f, 0.5f, 0.0f, 1.0f))
+            .put(ColorVertex(boxSize, -boxSize, -boxSize, 1.0f, 0.5f, 0.0f, 1.0f))
+            .put(ColorVertex(boxSize, boxSize, -boxSize, 1.0f, 0.5f, 0.0f, 1.0f))
+            .put(ColorVertex(-boxSize, boxSize, -boxSize, 1.0f, 0.5f, 0.0f, 1.0f))
+            .put(ColorVertex(-boxSize, -boxSize, boxSize, 1.0f, 0.5f, 0.0f, 1.0f))
+            .put(ColorVertex(boxSize, -boxSize, boxSize, 1.0f, 0.5f, 0.0f, 1.0f))
+            .put(ColorVertex(boxSize, boxSize, boxSize, 1.0f, 0.5f, 0.0f, 1.0f))
+            .put(ColorVertex(-boxSize, boxSize, boxSize, 1.0f, 0.5f, 0.0f, 1.0f))
+            .flip()
+
+        // 创建小方块的 VertexBuffer
+        smallBoxVertexBuffer = VertexBuffer.Builder()
+            .bufferCount(1)
+            .vertexCount(8)
+            .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT3, 0, vertexSize)
+            .attribute(VertexAttribute.COLOR, 0, AttributeType.FLOAT4, 3 * floatSize, vertexSize)
+            .build(engine)
+        smallBoxVertexBuffer.setBufferAt(engine, 0, smallBoxVertexData)
+
+        // 创建小方块的索引数据（12个三角形，36个索引）
+        val indexData = ByteBuffer.allocate(36 * 2)
+            .order(ByteOrder.nativeOrder())
+
+        // 立方体的6个面，每个面2个三角形
+        val faces = arrayOf(
+            // 前面
+            shortArrayOf(0, 1, 2, 0, 2, 3),
+            // 后面
+            shortArrayOf(4, 7, 6, 4, 6, 5),
+            // 左面
+            shortArrayOf(0, 3, 7, 0, 7, 4),
+            // 右面
+            shortArrayOf(1, 5, 6, 1, 6, 2),
+            // 底面
+            shortArrayOf(0, 4, 5, 0, 5, 1),
+            // 顶面
+            shortArrayOf(3, 2, 6, 3, 6, 7)
+        )
+
+        faces.forEach { face ->
+            face.forEach { vertex ->
+                indexData.putShort(vertex)
+            }
+        }
+        indexData.flip()
+
+        // 创建小方块的 IndexBuffer
+        smallBoxIndexBuffer = IndexBuffer.Builder()
+            .indexCount(36)
+            .bufferType(IndexBuffer.Builder.IndexType.USHORT)
+            .build(engine)
+        smallBoxIndexBuffer.setBuffer(engine, indexData)
+    }
+
     // 创建可渲染实体并将其添加到场景中
     private fun createRenderables() {
         // 创建立方体的可渲染实体
@@ -637,6 +737,17 @@ class MainActivity : Activity() {
             // .material(0, axisMaterialInstance) // 关联材质（已注释）
             .build(engine, axisLabelRenderable)
         scene.addEntity(axisLabelRenderable)
+
+        // 创建小方块的可渲染实体
+        smallBoxRenderable = EntityManager.get().create()
+        RenderableManager.Builder(1)
+            .boundingBox(Box(-0.3f, -0.3f, -0.3f, 0.3f, 0.3f, 0.3f))
+            .geometry(0, PrimitiveType.TRIANGLES, smallBoxVertexBuffer, smallBoxIndexBuffer, 0, 36)
+            .build(engine, smallBoxRenderable)
+        scene.addEntity(smallBoxRenderable)
+        
+        // 设置小方块的初始位置
+        updateSmallBoxPosition()
     }
 
     // 设置场景光照
@@ -680,27 +791,75 @@ class MainActivity : Activity() {
         )
     }
 
+    /**
+     * 更新小方块的位置
+     */
+    private fun updateSmallBoxPosition() {
+        val tm = engine.transformManager
+        val transform = tm.getInstance(smallBoxRenderable)
+        val matrix = FloatArray(16)
+        
+        // 创建平移矩阵
+        // 手动创建单位矩阵
+        for (i in matrix.indices) {
+            matrix[i] = 0.0f
+        }
+        matrix[0] = 1.0f   // m00
+        matrix[5] = 1.0f   // m11
+        matrix[10] = 1.0f  // m22
+        matrix[15] = 1.0f  // m33
+        
+        // 设置平移分量
+        matrix[12] = smallBoxX
+        matrix[13] = smallBoxY
+        matrix[14] = smallBoxZ
+        
+        tm.setTransform(transform, matrix)
+    }
+
     // 触摸事件处理
     private var lastX = 0f
     private var lastY = 0f
     private var isDragging = false
 
-    // 处理触摸事件，用于旋转摄像机
+    // 处理触摸事件，用于旋转摄像机或拖拽小方块
     private fun handleTouch(event: MotionEvent): Boolean {
         when (event.action) {
             // 手指按下时，记录初始位置并开始拖动
             MotionEvent.ACTION_DOWN -> {
                 lastX = event.x
                 lastY = event.y
-                isDragging = true
-
-                // 检查是否点击了坐标轴端点以切换视角
-                checkAxisClick(event.x, event.y)
+                
+                // 检查是否点击了小方块
+                if (checkSmallBoxClick(event.x, event.y)) {
+                    isDraggingSmallBox = true
+                    isSmallBoxSelected = true
+                    Log.d(TAG, "Small box selected")
+                } else {
+                    isDragging = true
+                    isSmallBoxSelected = false
+                    // 检查是否点击了坐标轴端点以切换视角
+                    checkAxisClick(event.x, event.y)
+                }
                 return true
             }
-            // 手指移动时，根据移动距离更新摄像机角度
+            // 手指移动时，根据移动距离更新摄像机角度或移动小方块
             MotionEvent.ACTION_MOVE -> {
-                if (isDragging) {
+                if (isDraggingSmallBox) {
+                    // 拖拽小方块
+                    val deltaX = event.x - lastX
+                    val deltaY = event.y - lastY
+                    
+                    // 将屏幕坐标转换为世界坐标的移动
+                    val sensitivity = 0.01f
+                    smallBoxX += deltaX * sensitivity
+                    smallBoxY -= deltaY * sensitivity // Y轴反向
+                    
+                    updateSmallBoxPosition()
+                    
+                    Log.d(TAG, "Moving small box to: ($smallBoxX, $smallBoxY, $smallBoxZ)")
+                } else if (isDragging) {
+                    // 旋转摄像机
                     val deltaX = event.x - lastX
                     val deltaY = event.y - lastY
 
@@ -715,19 +874,71 @@ class MainActivity : Activity() {
 
                     // 更新摄像机
                     updateCamera()
-
-                    // 更新最后位置
-                    lastX = event.x
-                    lastY = event.y
                 }
+                
+                // 更新最后位置
+                lastX = event.x
+                lastY = event.y
                 return true
             }
             // 手指抬起时，停止拖动
             MotionEvent.ACTION_UP -> {
                 isDragging = false
+                isDraggingSmallBox = false
                 return true
             }
         }
+        return false
+    }
+
+    // 检查是否点击了小方块
+    private fun checkSmallBoxClick(screenX: Float, screenY: Float): Boolean {
+        // 获取视图矩阵和投影矩阵
+        val viewMatrix = DoubleArray(16)
+        val projectionMatrix = DoubleArray(16)
+        
+        camera.getViewMatrix(viewMatrix)
+        camera.getProjectionMatrix(projectionMatrix)
+
+        val projectionMatrixFloat = projectionMatrix.map { it.toFloat() }.toFloatArray()
+        val viewMatrixFloat = viewMatrix.map { it.toFloat() }.toFloatArray()
+        
+        // 使用简化的投影计算
+        val mvpMatrix = FloatArray(16)
+        android.opengl.Matrix.multiplyMM(mvpMatrix, 0, projectionMatrixFloat, 0, viewMatrixFloat, 0)
+        
+        val worldPos4 = doubleArrayOf(smallBoxX.toDouble(), smallBoxY.toDouble(), smallBoxZ.toDouble(), 1.0)
+        val clipPos = DoubleArray(4)
+        
+        // 矩阵乘法：MVP * worldPos
+        for (i in 0..3) {
+            clipPos[i] = mvpMatrix[i * 4] * worldPos4[0] +
+                        mvpMatrix[i * 4 + 1] * worldPos4[1] +
+                        mvpMatrix[i * 4 + 2] * worldPos4[2] +
+                        mvpMatrix[i * 4 + 3] * worldPos4[3]
+        }
+        
+        // 透视除法
+        if (clipPos[3] != 0.0) {
+            val ndcX = clipPos[0] / clipPos[3]
+            val ndcY = clipPos[1] / clipPos[3]
+            
+            // 转换到屏幕坐标
+            val projectedX = (ndcX + 1.0) * 0.5 * surfaceView.width
+            val projectedY = (1.0 - ndcY) * 0.5 * surfaceView.height
+            
+            // 检查点击是否在小方块附近（使用一个较大的点击区域）
+            val clickRadius = 50.0
+            val distance = kotlin.math.sqrt(
+                (screenX - projectedX) * (screenX - projectedX) +
+                (screenY - projectedY) * (screenY - projectedY)
+            )
+            
+            Log.d(TAG, "Small box screen pos: ($projectedX, $projectedY), click: ($screenX, $screenY), distance: $distance")
+            
+            return distance < clickRadius
+        }
+        
         return false
     }
 
@@ -792,6 +1003,7 @@ class MainActivity : Activity() {
         engine.destroyEntity(cubeRenderable)
         engine.destroyEntity(axisRenderable)
         engine.destroyEntity(axisLabelRenderable)
+        engine.destroyEntity(smallBoxRenderable)
         engine.destroyRenderer(renderer)
         engine.destroyVertexBuffer(cubeVertexBuffer)
         engine.destroyIndexBuffer(cubeIndexBuffer)
@@ -799,6 +1011,8 @@ class MainActivity : Activity() {
         engine.destroyIndexBuffer(axisIndexBuffer)
         engine.destroyVertexBuffer(axisLabelVertexBuffer)
         engine.destroyIndexBuffer(axisLabelIndexBuffer)
+        engine.destroyVertexBuffer(smallBoxVertexBuffer)
+        engine.destroyIndexBuffer(smallBoxIndexBuffer)
         // engine.destroyMaterialInstance(cubeMaterialInstance)
         // engine.destroyMaterialInstance(axisMaterialInstance)
         // engine.destroyMaterial(litMaterial)
@@ -813,6 +1027,7 @@ class MainActivity : Activity() {
         entityManager.destroy(cubeRenderable)
         entityManager.destroy(axisRenderable)
         entityManager.destroy(axisLabelRenderable)
+        entityManager.destroy(smallBoxRenderable)
         entityManager.destroy(camera.entity)
 
         // 最后销毁引擎
