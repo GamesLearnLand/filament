@@ -1,39 +1,95 @@
+// Filament 基于物理的渲染(PBR)材质定义文件
+// 这是一个简单的光照材质，定义了3个核心参数：
+// - baseColor: 基础颜色
+// - roughness: 粗糙度
+// - metallic: 金属度
 //
-// This source material must be compiled to a binary material using the matc tool.
-// The command used to compile this material is:
-// matc -p mobile -a opengl -o app/src/main/assets/materials/lit.filamat app/src/materials/lit.mat
+// 这些参数可以被应用程序用来改变材质的外观。
+// 该材质使用Filament的标准光照模型(lit model)，这是一个基于物理的着色模型，
+// 设计用于与Unity 5、Unreal Engine 4、Substance Designer等工具良好互操作。
 //
-// See build.gradle for an example of how to compile materials automatically
-// Please refer to the documentation for more information about matc and the materials system.
+// 此源材质文件必须使用matc工具编译为二进制材质包：
+// matc -p mobile -a opengl -o app/src/main/assets/lit.filamat app/src/materials/lit.mat
+//
+// 参考build.gradle了解如何自动编译材质的示例
+// 更多关于matc和材质系统的信息请参考官方文档
 
 material {
+    // 材质名称，用于在运行时识别和引用此材质
     name : lit,
 
-    // Lists the required vertex attributes
-    requires : [
-        position,
-        tangents
-    ],
-
-    // This material uses the lit shading model
+    // 着色模型：使用lit模型启用动态光照
+    // lit模型是Filament的标准PBR材质模型，支持：
+    // - 非金属表面(电介质)和金属表面(导体)
+    // - 基于物理的光照计算
+    // - 与其他PBR工具和引擎的良好兼容性
     shadingModel : lit,
-    featureLevel : 0,
-    blending : opaque
+
+    // We don't need to declare a "requires" array, lit materials
+    // always requires the "tangents" vertex attribute (the normal
+    // is required for lighting, tangent/bitangent for normal mapping
+    // and anisotropy)
+    // 我们不需要声明"requires"数组，光照材质
+    // 总是需要"tangents"顶点属性（法线
+    // 用于光照计算，切线/副切线用于法线贴图
+    // 和各向异性效果）
+
+    // 此材质暴露给应用程序的参数列表
+    // 这些参数允许在运行时动态调整材质外观
+    parameters : [
+        // baseColor: 基础颜色 (float3, 范围[0..1])
+        // - 对于非金属表面：表示漫反射反照率(diffuse albedo)
+        // - 对于金属表面：表示镜面反射颜色(specular color)
+        // 注意：颜色值必须在线性空间中传递，而不是sRGB空间
+        // 这是预乘的线性颜色值，确保正确的光照计算
+        {
+            type : float3,
+            name : baseColor
+        },
+        // roughness: 粗糙度 (float, 范围[0..1])
+        // - 0.0: 完全光滑的表面，产生锐利的反射
+        // - 1.0: 完全粗糙的表面，产生漫散的反射
+        // 控制表面的感知光滑度，影响镜面反射的锐利程度
+        {
+            type : float,
+            name : roughness
+        },
+        // metallic: 金属度 (float, 范围[0..1])
+        // - 0.0: 电介质材料(非金属)，如塑料、木材、皮肤等
+        // - 1.0: 导体材料(金属)，如铁、金、银等
+        // 通常作为二进制值使用(0或1)，决定材质的基本物理属性
+        {
+            type : float,
+            name : metallic
+        }
+    ],
 }
 
-vertex {
-    void materialVertex(inout MaterialVertexInputs material) {
-        // Nothing to do here
-    }
-}
-
+// Fragment Shader 片段着色器部分
+// 定义材质在每个像素上的具体行为
 fragment {
+    // material函数：Filament材质系统的核心函数
+    // 参数：MaterialInputs material - 输入输出的材质属性结构体
+    // 此函数在每个像素的渲染过程中被调用，用于设置该像素的材质属性
     void material(inout MaterialInputs material) {
+        // prepareMaterial：初始化材质输入结构体
+        // 设置默认值并准备材质属性，这是必需的第一步
         prepareMaterial(material);
+
+        // 将用户定义的参数直接赋值给材质属性
+        // 这是一个简单的直接映射，没有复杂的计算或纹理采样
         
-        // Set base color
-        material.baseColor.rgb = materialParams.baseColor.rgb;
-        material.metallic = materialParams.metallic;
+        // 设置基础颜色的RGB分量
+        // materialParams是包含所有用户参数的结构体
+        material.baseColor.rgb = materialParams.baseColor;
+        
+        // 设置表面粗糙度，影响镜面反射的模糊程度
         material.roughness = materialParams.roughness;
+        
+        // 设置金属度，决定材质是电介质还是导体
+        material.metallic = materialParams.metallic;
+        
+        // 注意：此材质没有使用纹理、法线贴图或其他高级特性
+        // 仅使用基本的PBR参数来定义材质外观
     }
 }

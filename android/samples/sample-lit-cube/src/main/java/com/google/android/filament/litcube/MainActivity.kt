@@ -326,7 +326,8 @@ class MainActivity : Activity() {
         RenderableManager.Builder(1)
             // Overall bounding box of the renderable
             // 可渲染对象的整体包围盒
-            .boundingBox(Box(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f))
+            .boundingBox(Box(0.0f, 0.0f, 0.0f,
+                1.0f, 1.0f, 1.0f))
             // Sets the mesh data of the first primitive, 6 faces of 6 indices each
             // 设置第一个图元的网格数据，6个面，每个面6个索引
             .geometry(0, PrimitiveType.TRIANGLES, vertexBuffer, indexBuffer, 0, 6 * 6)

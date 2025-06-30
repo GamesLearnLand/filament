@@ -18,6 +18,8 @@ import com.google.android.filament.EntityManager
 import com.google.android.filament.Filament
 import com.google.android.filament.IndexBuffer
 import com.google.android.filament.LightManager
+import com.google.android.filament.Material
+import com.google.android.filament.MaterialInstance
 import com.google.android.filament.RenderableManager
 import com.google.android.filament.RenderableManager.PrimitiveType
 import com.google.android.filament.Renderer
@@ -34,6 +36,7 @@ import com.google.android.filament.android.FilamentHelper
 import com.google.android.filament.android.UiHelper
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.channels.Channels
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -124,6 +127,16 @@ class MainActivity : Activity() {
     private var isSmallBoxSelected = false // 小方块是否被选中
     private var isDraggingSmallBox = false // 是否正在拖拽小方块
 
+    /**
+     * 材质定义了物体表面的视觉属性（如颜色、粗糙度、金属度等）
+     */
+    private lateinit var material: Material
+
+    /**
+     * 材质实例允许为同一材质设置不同的参数值
+     */
+    private lateinit var materialInstance: MaterialInstance
+
     // Activity 的 onCreate 方法，是应用的入口点。
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -207,6 +220,10 @@ class MainActivity : Activity() {
 
     // 设置场景，包括创建物体、材质和光源
     private fun setupScene() {
+        // 加载材质文件
+        loadMaterial()
+        // 配置材质参数
+        setupMaterial()
         // 创建坐标轴的网格数据
         createAxisMesh()
         // 创建小方块的网格数据
@@ -217,6 +234,69 @@ class MainActivity : Activity() {
         createRenderables()
         // 设置场景光照
         setupLighting()
+    }
+
+    /**
+     * 配置材质参数
+     * 设置基础颜色、金属度和粗糙度等物理材质属性
+     */
+    private fun setupMaterial() {
+        // Create an instance of the material to set different parameters on it
+        // 创建材质实例以在其上设置不同的参数
+        materialInstance = material.createInstance()
+        // Specify that our color is in sRGB so the conversion to linear
+        // 指定我们的颜色在sRGB色彩空间中，这样到线性空间的转换
+        // is done automatically for us. If you already have a linear color
+        // 会自动为我们完成。如果您已经有线性颜色
+        // you can pass it directly, or use Colors.RgbType.LINEAR
+        // 您可以直接传递，或使用Colors.RgbType.LINEAR
+        // 设置基础颜色为温暖的金黄色
+        materialInstance.setParameter("baseColor", Colors.RgbType.SRGB, 1.0f, 0.85f, 0.57f)
+        // The default value is always 0, but it doesn't hurt to be clear about our intentions
+        // 默认值总是0，但明确我们的意图并无害处
+        // Here we are defining a dielectric material
+        // 这里我们定义的是电介质材料（非金属）
+        materialInstance.setParameter("metallic", 0.0f)
+        // We increase the roughness to spread the specular highlights
+        // 我们增加粗糙度以扩散镜面高光
+        materialInstance.setParameter("roughness", 0.3f)
+    }
+
+
+    /**
+     * 从资源文件加载材质
+     * 读取预编译的.filamat材质文件
+     */
+    private fun loadMaterial() {
+        // 读取assets目录下的材质文件并创建Material对象
+        readUncompressedAsset("materials/lit.filamat").let {
+            material = Material.Builder().payload(it, it.remaining()).build(engine)
+        }
+    }
+
+    /**
+     * 读取未压缩的资源文件
+     * @param assetName 资源文件名
+     * @return 包含文件内容的ByteBuffer
+     */
+    private fun readUncompressedAsset(assetName: String): ByteBuffer {
+        // 打开资源文件描述符
+        assets.openFd(assetName).use { fd ->
+            // 创建输入流
+            val input = fd.createInputStream()
+            // 分配与文件大小相同的字节缓冲区
+            val dst = ByteBuffer.allocate(fd.length.toInt())
+
+            // 创建NIO通道进行高效读取
+            val src = Channels.newChannel(input)
+            // 将文件内容读取到缓冲区
+            src.read(dst)
+            // 关闭源通道
+            src.close()
+
+            // 重置缓冲区位置并返回
+            return dst.apply { rewind() }
+        }
     }
 
     // 创建坐标轴的网格数据
@@ -638,8 +718,14 @@ class MainActivity : Activity() {
         // 创建小方块的可渲染实体
         smallBoxRenderable = EntityManager.get().create()
         RenderableManager.Builder(1)
-            .boundingBox(Box(-0.3f, -0.3f, -0.3f, 0.3f, 0.3f, 0.3f))
+            .boundingBox(
+                Box(-0.3f, -0.3f, -0.3f,
+                    0.3f, 0.3f, 0.3f))
             .geometry(0, PrimitiveType.TRIANGLES, smallBoxVertexBuffer, smallBoxIndexBuffer, 0, 36)
+            .material(0, materialInstance)
+            .culling(false)      // 禁用背面剔除
+            .receiveShadows(false)  // 不接收阴影
+            .castShadows(false)     // 不投射阴影
             .build(engine, smallBoxRenderable)
         scene.addEntity(smallBoxRenderable)
 
@@ -729,7 +815,7 @@ class MainActivity : Activity() {
             0.0, 0.0, 0.0,
             0.0, 1.0, 0.0
         )
-        
+
         Log.d(TAG, "Camera position updated: ($x, $y, $z)")
     }
 
@@ -760,7 +846,7 @@ class MainActivity : Activity() {
     private var lastX = 0f
     private var lastY = 0f
     private var isDragging = false
-    
+
     // 小方块拖拽相关变量
     private var dragStartX = 0f
     private var dragStartY = 0f
@@ -781,17 +867,18 @@ class MainActivity : Activity() {
                 if (checkSmallBoxClick(event.x, event.y)) {
                     isDraggingSmallBox = true
                     isSmallBoxSelected = true
-                    
+
                     // 记录拖拽开始时的屏幕坐标和小方块坐标
                     dragStartX = event.x
                     dragStartY = event.y
                     smallBoxStartX = smallBoxX
                     smallBoxStartY = smallBoxY
                     smallBoxStartZ = smallBoxZ
-                    
+
                     // 计算并记录拖拽开始时与摄像机的距离
-                    dragStartDepth = calculateDepthFromWorldPosition(smallBoxX, smallBoxY, smallBoxZ)
-                    
+                    dragStartDepth =
+                        calculateDepthFromWorldPosition(smallBoxX, smallBoxY, smallBoxZ)
+
                     Log.d(TAG, "Small box selected")
                 } else {
                     isDragging = true
@@ -803,18 +890,20 @@ class MainActivity : Activity() {
             MotionEvent.ACTION_MOVE -> {
                 if (isDraggingSmallBox) {
                     // 使用深度不变原则：保持小方块与摄像机的距离不变
-                    val newWorldPos = screenToWorldPositionAtCameraDistance(event.x, event.y, dragStartDepth)
-                    
+                    val newWorldPos =
+                        screenToWorldPositionAtCameraDistance(event.x, event.y, dragStartDepth)
+
                     if (newWorldPos != null) {
                         // 更新小方块位置，保持与摄像机的距离不变
                         smallBoxX = newWorldPos[0]
                         smallBoxY = newWorldPos[1]
                         smallBoxZ = newWorldPos[2]
-                        
+
                         updateSmallBoxPosition()
 
                         // 验证距离是否保持不变
-                        val currentDistance = calculateDepthFromWorldPosition(smallBoxX, smallBoxY, smallBoxZ)
+                        val currentDistance =
+                            calculateDepthFromWorldPosition(smallBoxX, smallBoxY, smallBoxZ)
                         Log.d(
                             TAG,
                             "Moving small box to: ($smallBoxX, $smallBoxY, $smallBoxZ), distance: $currentDistance (original: $dragStartDepth)"
@@ -948,6 +1037,8 @@ class MainActivity : Activity() {
         engine.destroyIndexBuffer(axisLabelIndexBuffer)
         engine.destroyVertexBuffer(smallBoxVertexBuffer)
         engine.destroyIndexBuffer(smallBoxIndexBuffer)
+        engine.destroyMaterialInstance(materialInstance) // 销毁材质实例
+        engine.destroyMaterial(material)               // 销毁材质
         engine.destroyView(view)
         engine.destroyScene(scene)
         engine.destroyCameraComponent(camera.entity)
@@ -974,23 +1065,27 @@ class MainActivity : Activity() {
      * @param worldZ 世界坐标Z
      * @return 与摄像机的实际距离
      */
-    private fun calculateDepthFromWorldPosition(worldX: Float, worldY: Float, worldZ: Float): Float {
+    private fun calculateDepthFromWorldPosition(
+        worldX: Float,
+        worldY: Float,
+        worldZ: Float
+    ): Float {
         val viewMatrix = DoubleArray(16)
         camera.getViewMatrix(viewMatrix)
         val viewMatrixFloat = viewMatrix.map { it.toFloat() }.toFloatArray()
-        
+
         // 获取相机在世界空间的位置
         val invViewMatrix = FloatArray(16)
         android.opengl.Matrix.invertM(invViewMatrix, 0, viewMatrixFloat, 0)
         val cameraWorldX = invViewMatrix[12]
         val cameraWorldY = invViewMatrix[13]
         val cameraWorldZ = invViewMatrix[14]
-        
+
         // 计算与摄像机的欧几里得距离
         val deltaX = worldX - cameraWorldX
         val deltaY = worldY - cameraWorldY
         val deltaZ = worldZ - cameraWorldZ
-        
+
         return kotlin.math.sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ)
     }
 
@@ -1002,7 +1097,11 @@ class MainActivity : Activity() {
      * @param targetDepthZ 目标世界坐标Z值（深度）
      * @return 世界坐标数组[x, y, z]，如果转换失败返回null
      */
-    private fun screenToWorldPositionAtDepth(screenX: Float, screenY: Float, targetDepthZ: Float): FloatArray? {
+    private fun screenToWorldPositionAtDepth(
+        screenX: Float,
+        screenY: Float,
+        targetDepthZ: Float
+    ): FloatArray? {
         try {
             // 获取视图矩阵和投影矩阵
             val viewMatrix = DoubleArray(16)
@@ -1017,8 +1116,15 @@ class MainActivity : Activity() {
             // 计算视图投影矩阵的逆矩阵
             val vpMatrix = FloatArray(16)
             val vpInverseMatrix = FloatArray(16)
-            android.opengl.Matrix.multiplyMM(vpMatrix, 0, projectionMatrixFloat, 0, viewMatrixFloat, 0)
-            
+            android.opengl.Matrix.multiplyMM(
+                vpMatrix,
+                0,
+                projectionMatrixFloat,
+                0,
+                viewMatrixFloat,
+                0
+            )
+
             if (!android.opengl.Matrix.invertM(vpInverseMatrix, 0, vpMatrix, 0)) {
                 return null // 矩阵不可逆
             }
@@ -1033,7 +1139,7 @@ class MainActivity : Activity() {
             val cameraWorldX = invViewMatrix[12]
             val cameraWorldY = invViewMatrix[13]
             val cameraWorldZ = invViewMatrix[14]
-            
+
             // 在近平面上获取射线方向
             val nearNdcPos = floatArrayOf(ndcX, ndcY, -1.0f, 1.0f)
             val nearWorldPos = FloatArray(4)
@@ -1043,12 +1149,12 @@ class MainActivity : Activity() {
                 nearWorldPos[1] /= nearWorldPos[3]
                 nearWorldPos[2] /= nearWorldPos[3]
             }
-            
+
             // 计算射线方向
             val rayDirX = nearWorldPos[0] - cameraWorldX
             val rayDirY = nearWorldPos[1] - cameraWorldY
             val rayDirZ = nearWorldPos[2] - cameraWorldZ
-            
+
             // 计算射线与Z=targetDepthZ平面的交点
             // 射线方程: P = camera + t * rayDir
             // 平面方程: Z = targetDepthZ
@@ -1057,24 +1163,24 @@ class MainActivity : Activity() {
                 // 射线与平面平行，无交点
                 return null
             }
-            
+
             val t = (targetDepthZ - cameraWorldZ) / rayDirZ
             // 移除t < 0的限制，允许在相机前后方向上的投射
             // if (t < 0) {
             //     // 交点在相机后方
             //     return null
             // }
-            
+
             val intersectionX = cameraWorldX + t * rayDirX
             val intersectionY = cameraWorldY + t * rayDirY
-            
+
             Log.d(TAG, "Camera position: ($cameraWorldX, $cameraWorldY, $cameraWorldZ)")
             Log.d(TAG, "Ray direction: ($rayDirX, $rayDirY, $rayDirZ)")
             Log.d(TAG, "Target depth: $targetDepthZ, t: $t")
             Log.d(TAG, "Intersection: ($intersectionX, $intersectionY, $targetDepthZ)")
-            
+
             return floatArrayOf(intersectionX, intersectionY, targetDepthZ)
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "Error converting screen to world position at depth", e)
             return null
@@ -1089,7 +1195,11 @@ class MainActivity : Activity() {
      * @param cameraDistance 与摄像机的距离
      * @return 世界坐标数组[x, y, z]，如果转换失败返回null
      */
-    private fun screenToWorldPositionAtCameraDistance(screenX: Float, screenY: Float, cameraDistance: Float): FloatArray? {
+    private fun screenToWorldPositionAtCameraDistance(
+        screenX: Float,
+        screenY: Float,
+        cameraDistance: Float
+    ): FloatArray? {
         try {
             // 获取视图矩阵和投影矩阵
             val viewMatrix = DoubleArray(16)
@@ -1104,8 +1214,15 @@ class MainActivity : Activity() {
             // 计算视图投影矩阵的逆矩阵
             val vpMatrix = FloatArray(16)
             val vpInverseMatrix = FloatArray(16)
-            android.opengl.Matrix.multiplyMM(vpMatrix, 0, projectionMatrixFloat, 0, viewMatrixFloat, 0)
-            
+            android.opengl.Matrix.multiplyMM(
+                vpMatrix,
+                0,
+                projectionMatrixFloat,
+                0,
+                viewMatrixFloat,
+                0
+            )
+
             if (!android.opengl.Matrix.invertM(vpInverseMatrix, 0, vpMatrix, 0)) {
                 return null // 矩阵不可逆
             }
@@ -1120,7 +1237,7 @@ class MainActivity : Activity() {
             val cameraWorldX = invViewMatrix[12]
             val cameraWorldY = invViewMatrix[13]
             val cameraWorldZ = invViewMatrix[14]
-            
+
             // 在近平面上获取射线方向
             val nearNdcPos = floatArrayOf(ndcX, ndcY, -1.0f, 1.0f)
             val nearWorldPos = FloatArray(4)
@@ -1130,34 +1247,38 @@ class MainActivity : Activity() {
                 nearWorldPos[1] /= nearWorldPos[3]
                 nearWorldPos[2] /= nearWorldPos[3]
             }
-            
+
             // 计算射线方向（从相机到屏幕点的方向）
             val rayDirX = nearWorldPos[0] - cameraWorldX
             val rayDirY = nearWorldPos[1] - cameraWorldY
             val rayDirZ = nearWorldPos[2] - cameraWorldZ
-            
+
             // 归一化射线方向
-            val rayLength = kotlin.math.sqrt(rayDirX * rayDirX + rayDirY * rayDirY + rayDirZ * rayDirZ)
+            val rayLength =
+                kotlin.math.sqrt(rayDirX * rayDirX + rayDirY * rayDirY + rayDirZ * rayDirZ)
             if (rayLength < 1e-6f) {
                 return null // 射线长度为0
             }
-            
+
             val normalizedRayDirX = rayDirX / rayLength
             val normalizedRayDirY = rayDirY / rayLength
             val normalizedRayDirZ = rayDirZ / rayLength
-            
+
             // 沿射线移动指定的摄像机距离
             val targetWorldX = cameraWorldX + normalizedRayDirX * cameraDistance
             val targetWorldY = cameraWorldY + normalizedRayDirY * cameraDistance
             val targetWorldZ = cameraWorldZ + normalizedRayDirZ * cameraDistance
-            
+
             Log.d(TAG, "Camera position: ($cameraWorldX, $cameraWorldY, $cameraWorldZ)")
-            Log.d(TAG, "Ray direction: ($normalizedRayDirX, $normalizedRayDirY, $normalizedRayDirZ)")
+            Log.d(
+                TAG,
+                "Ray direction: ($normalizedRayDirX, $normalizedRayDirY, $normalizedRayDirZ)"
+            )
             Log.d(TAG, "Camera distance: $cameraDistance")
             Log.d(TAG, "Target position: ($targetWorldX, $targetWorldY, $targetWorldZ)")
-            
+
             return floatArrayOf(targetWorldX, targetWorldY, targetWorldZ)
-            
+
         } catch (e: Exception) {
             Log.e(TAG, "Error converting screen to world position at camera distance", e)
             return null
@@ -1171,7 +1292,11 @@ class MainActivity : Activity() {
      * @param depth 指定的深度值，如果为null则使用小方块当前深度
      * @return 世界坐标数组[x, y, z]，如果转换失败返回null
      */
-    private fun screenToWorldPosition(screenX: Float, screenY: Float, depth: Float? = null): FloatArray? {
+    private fun screenToWorldPosition(
+        screenX: Float,
+        screenY: Float,
+        depth: Float? = null
+    ): FloatArray? {
         try {
             // 获取视图矩阵和投影矩阵
             val viewMatrix = DoubleArray(16)
@@ -1186,8 +1311,15 @@ class MainActivity : Activity() {
             // 计算视图投影矩阵的逆矩阵
             val vpMatrix = FloatArray(16)
             val vpInverseMatrix = FloatArray(16)
-            android.opengl.Matrix.multiplyMM(vpMatrix, 0, projectionMatrixFloat, 0, viewMatrixFloat, 0)
-            
+            android.opengl.Matrix.multiplyMM(
+                vpMatrix,
+                0,
+                projectionMatrixFloat,
+                0,
+                viewMatrixFloat,
+                0
+            )
+
             if (!android.opengl.Matrix.invertM(vpInverseMatrix, 0, vpMatrix, 0)) {
                 return null // 矩阵不可逆
             }
@@ -1200,7 +1332,14 @@ class MainActivity : Activity() {
             val useDepth = depth ?: run {
                 val currentWorldPos = floatArrayOf(smallBoxX, smallBoxY, smallBoxZ, 1.0f)
                 val currentViewPos = FloatArray(4)
-                android.opengl.Matrix.multiplyMV(currentViewPos, 0, viewMatrixFloat, 0, currentWorldPos, 0)
+                android.opengl.Matrix.multiplyMV(
+                    currentViewPos,
+                    0,
+                    viewMatrixFloat,
+                    0,
+                    currentWorldPos,
+                    0
+                )
                 -currentViewPos[2] // 相机空间中的Z深度（负值转正值）
             }
 
@@ -1212,11 +1351,11 @@ class MainActivity : Activity() {
             cameraWorldPos[0] = invViewMatrix[12]
             cameraWorldPos[1] = invViewMatrix[13]
             cameraWorldPos[2] = invViewMatrix[14]
-            
+
             // 计算射线方向（从相机到屏幕点的方向）
             val nearPlane = 0.1f
             val farPlane = 20.0f
-            
+
             // 在近平面上的点
             val nearNdcZ = -1.0f
             val nearNdcPos = floatArrayOf(ndcX, ndcY, nearNdcZ, 1.0f)
@@ -1227,23 +1366,24 @@ class MainActivity : Activity() {
                 nearWorldPos[1] /= nearWorldPos[3]
                 nearWorldPos[2] /= nearWorldPos[3]
             }
-            
+
             // 计算射线方向
             val rayDirX = nearWorldPos[0] - cameraWorldPos[0]
             val rayDirY = nearWorldPos[1] - cameraWorldPos[1]
             val rayDirZ = nearWorldPos[2] - cameraWorldPos[2]
-            
+
             // 归一化射线方向
-            val rayLength = kotlin.math.sqrt(rayDirX * rayDirX + rayDirY * rayDirY + rayDirZ * rayDirZ)
+            val rayLength =
+                kotlin.math.sqrt(rayDirX * rayDirX + rayDirY * rayDirY + rayDirZ * rayDirZ)
             val normalizedRayDirX = rayDirX / rayLength
             val normalizedRayDirY = rayDirY / rayLength
             val normalizedRayDirZ = rayDirZ / rayLength
-            
+
             // 沿射线移动到指定深度
             val targetWorldX = cameraWorldPos[0] + normalizedRayDirX * useDepth
             val targetWorldY = cameraWorldPos[1] + normalizedRayDirY * useDepth
             val targetWorldZ = cameraWorldPos[2] + normalizedRayDirZ * useDepth
-            
+
             return floatArrayOf(targetWorldX, targetWorldY, targetWorldZ)
         } catch (e: Exception) {
             Log.e(TAG, "Error converting screen to world position", e)

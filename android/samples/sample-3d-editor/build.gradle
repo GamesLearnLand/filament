@@ -1,6 +1,12 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'filament-tools-plugin'
+}
+
+filamentTools {
+    materialInputDir = project.layout.projectDirectory.dir("src/main/materials")
+    materialOutputDir = project.layout.projectDirectory.dir("src/main/assets/materials")
 }
 
 android {
