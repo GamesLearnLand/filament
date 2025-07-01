@@ -53,29 +53,88 @@ class MainActivity : Activity() {
     }
 
     // UI 组件
-    private lateinit var surfaceView: SurfaceView // 用于显示 3D 内容的 SurfaceView，是 Filament 渲染的目标
-    private lateinit var rootLayout: ConstraintLayout // 界面的根布局
+
+    /**
+     * 用于显示 3D 内容的 SurfaceView，是 Filament 渲染的目标
+     */
+    private lateinit var surfaceView: SurfaceView
+
+    /**
+     * 界面的根布局
+     */
+    private lateinit var rootLayout: ConstraintLayout
 
     // Filament 相关组件
-    private lateinit var uiHelper: UiHelper // 辅助管理 SurfaceView 的生命周期，处理与 Android UI 的集成
-    private lateinit var displayHelper: DisplayHelper // 处理显示相关的事件，如屏幕方向和分辨率变化
-    private lateinit var choreographer: Choreographer // 用于同步渲染帧，确保动画和渲染的平滑性
-    private lateinit var engine: Engine // Filament 渲染引擎，是所有 Filament 操作的核心
-    private lateinit var renderer: Renderer // 渲染器，负责将场景渲染到 SurfaceView
-    private lateinit var scene: Scene // 场景对象，包含所有需要渲染的实体，如模型、光源等
-    private lateinit var view: View // 视图对象，定义了场景的观察方式，包括摄像机和视口
+
+    /**
+     * 辅助管理 SurfaceView 的生命周期，处理与 Android UI 的集成
+     */
+    private lateinit var uiHelper: UiHelper
+
+    /**
+     * 处理显示相关的事件，如屏幕方向和分辨率变化
+     */
+    private lateinit var displayHelper: DisplayHelper
+
+    /**
+     * 用于同步渲染帧，确保动画和渲染的平滑性
+     */
+    private lateinit var choreographer: Choreographer
+
+    /**
+     * Filament 渲染引擎，是所有 Filament 操作的核心
+     */
+    private lateinit var engine: Engine
+
+    /**
+     * 渲染器，负责将场景渲染到 SurfaceView
+     */
+    private lateinit var renderer: Renderer
+
+    /**
+     * 场景对象，包含所有需要渲染的实体，如模型、光源等
+     */
+    private lateinit var scene: Scene
+
+    /**
+     * 视图对象，定义了场景的观察方式，包括摄像机和视口
+     */
+    private lateinit var view: View
 
     /**
      * 摄像机，定义了观察场景的视角和投影
      */
     private lateinit var camera: Camera
 
-    private lateinit var axisVertexBuffer: VertexBuffer // 存储坐标轴顶点数据的缓冲区
-    private lateinit var axisIndexBuffer: IndexBuffer // 存储坐标轴索引数据的缓冲区
-    private lateinit var smallBoxVertexBuffer: VertexBuffer // 存储小方块顶点数据的缓冲区
-    private lateinit var smallBoxIndexBuffer: IndexBuffer // 存储小方块索引数据的缓冲区
-    private lateinit var axisLabelVertexBuffer: VertexBuffer // 存储坐标轴标签顶点数据的缓冲区
-    private lateinit var axisLabelIndexBuffer: IndexBuffer // 存储坐标轴标签索引数据的缓冲区
+    /**
+     * 存储坐标轴顶点数据的缓冲区
+     */
+    private lateinit var axisVertexBuffer: VertexBuffer
+
+    /**
+     * 存储坐标轴索引数据的缓冲区
+     */
+    private lateinit var axisIndexBuffer: IndexBuffer
+
+    /**
+     * 存储小方块顶点数据的缓冲区
+     */
+    private lateinit var smallBoxVertexBuffer: VertexBuffer
+
+    /**
+     * 存储小方块索引数据的缓冲区
+     */
+    private lateinit var smallBoxIndexBuffer: IndexBuffer
+
+    /**
+     * 存储坐标轴标签顶点数据的缓冲区
+     */
+    private lateinit var axisLabelVertexBuffer: VertexBuffer
+
+    /**
+     * 存储坐标轴标签索引数据的缓冲区
+     */
+    private lateinit var axisLabelIndexBuffer: IndexBuffer
 
     // 实体（Entities）
     // 实体是场景中的基本对象，通过关联组件（如 Renderable、Transform）来定义其行为和外观。
@@ -269,7 +328,7 @@ class MainActivity : Activity() {
      */
     private fun loadMaterial() {
         // 读取assets目录下的材质文件并创建Material对象
-        readUncompressedAsset("materials/lit.filamat").let {
+        readUncompressedAsset().let {
             material = Material.Builder().payload(it, it.remaining()).build(engine)
         }
     }
@@ -279,7 +338,7 @@ class MainActivity : Activity() {
      * @param assetName 资源文件名
      * @return 包含文件内容的ByteBuffer
      */
-    private fun readUncompressedAsset(assetName: String): ByteBuffer {
+    private fun readUncompressedAsset(assetName: String = "materials/lit.filamat"): ByteBuffer {
         // 打开资源文件描述符
         assets.openFd(assetName).use { fd ->
             // 创建输入流
@@ -719,8 +778,11 @@ class MainActivity : Activity() {
         smallBoxRenderable = EntityManager.get().create()
         RenderableManager.Builder(1)
             .boundingBox(
-                Box(-0.3f, -0.3f, -0.3f,
-                    0.3f, 0.3f, 0.3f))
+                Box(
+                    -0.3f, -0.3f, -0.3f,
+                    0.3f, 0.3f, 0.3f
+                )
+            )
             .geometry(0, PrimitiveType.TRIANGLES, smallBoxVertexBuffer, smallBoxIndexBuffer, 0, 36)
             .material(0, materialInstance)
             .culling(false)      // 禁用背面剔除
@@ -941,17 +1003,21 @@ class MainActivity : Activity() {
         return false
     }
 
-    // 检查是否点击了小方块
+    /**
+     * 检查是否点击了小方块
+     *
+     * @param screenX 屏幕坐标 X
+     * @param screenY 屏幕坐标 Y
+     */
     private fun checkSmallBoxClick(screenX: Float, screenY: Float): Boolean {
         // 获取视图矩阵和投影矩阵
-        val viewMatrix = DoubleArray(16)
+        val viewMatrix = FloatArray(16)
         val projectionMatrix = DoubleArray(16)
 
         camera.getViewMatrix(viewMatrix)
         camera.getProjectionMatrix(projectionMatrix)
 
         val projectionMatrixFloat = projectionMatrix.map { it.toFloat() }.toFloatArray()
-        val viewMatrixFloat = viewMatrix.map { it.toFloat() }.toFloatArray()
 
         // 获取小方块的模型矩阵
         val tm = engine.transformManager
@@ -961,7 +1027,7 @@ class MainActivity : Activity() {
 
         // 计算 Model-View 矩阵
         val mvMatrix = FloatArray(16)
-        android.opengl.Matrix.multiplyMM(mvMatrix, 0, viewMatrixFloat, 0, modelMatrix, 0)
+        android.opengl.Matrix.multiplyMM(mvMatrix, 0, viewMatrix, 0, modelMatrix, 0)
 
         // 计算 Model-View-Projection 矩阵
         val mvpMatrix = FloatArray(16)
@@ -1091,107 +1157,9 @@ class MainActivity : Activity() {
     }
 
     /**
-     * 在指定深度平面上将屏幕坐标转换为世界坐标
-     * 使用射线投射方法，确保结果在指定的Z深度平面上
-     * @param screenX 屏幕X坐标
-     * @param screenY 屏幕Y坐标
-     * @param targetDepthZ 目标世界坐标Z值（深度）
-     * @return 世界坐标数组[x, y, z]，如果转换失败返回null
-     */
-    private fun screenToWorldPositionAtDepth(
-        screenX: Float,
-        screenY: Float,
-        targetDepthZ: Float
-    ): FloatArray? {
-        try {
-            // 获取视图矩阵和投影矩阵
-            val viewMatrix = DoubleArray(16)
-            val projectionMatrix = DoubleArray(16)
-            camera.getViewMatrix(viewMatrix)
-            camera.getProjectionMatrix(projectionMatrix)
-
-            // 转换为Float数组
-            val viewMatrixFloat = viewMatrix.map { it.toFloat() }.toFloatArray()
-            val projectionMatrixFloat = projectionMatrix.map { it.toFloat() }.toFloatArray()
-
-            // 计算视图投影矩阵的逆矩阵
-            val vpMatrix = FloatArray(16)
-            val vpInverseMatrix = FloatArray(16)
-            android.opengl.Matrix.multiplyMM(
-                vpMatrix,
-                0,
-                projectionMatrixFloat,
-                0,
-                viewMatrixFloat,
-                0
-            )
-
-            if (!android.opengl.Matrix.invertM(vpInverseMatrix, 0, vpMatrix, 0)) {
-                return null // 矩阵不可逆
-            }
-
-            // 将屏幕坐标转换为NDC坐标
-            val ndcX = (screenX / surfaceView.width) * 2.0f - 1.0f
-            val ndcY = -((screenY / surfaceView.height) * 2.0f - 1.0f) // Y轴翻转
-
-            // 获取相机在世界空间的位置
-            val invViewMatrix = FloatArray(16)
-            android.opengl.Matrix.invertM(invViewMatrix, 0, viewMatrixFloat, 0)
-            val cameraWorldX = invViewMatrix[12]
-            val cameraWorldY = invViewMatrix[13]
-            val cameraWorldZ = invViewMatrix[14]
-
-            // 在近平面上获取射线方向
-            val nearNdcPos = floatArrayOf(ndcX, ndcY, -1.0f, 1.0f)
-            val nearWorldPos = FloatArray(4)
-            android.opengl.Matrix.multiplyMV(nearWorldPos, 0, vpInverseMatrix, 0, nearNdcPos, 0)
-            if (nearWorldPos[3] != 0.0f) {
-                nearWorldPos[0] /= nearWorldPos[3]
-                nearWorldPos[1] /= nearWorldPos[3]
-                nearWorldPos[2] /= nearWorldPos[3]
-            }
-
-            // 计算射线方向
-            val rayDirX = nearWorldPos[0] - cameraWorldX
-            val rayDirY = nearWorldPos[1] - cameraWorldY
-            val rayDirZ = nearWorldPos[2] - cameraWorldZ
-
-            // 计算射线与Z=targetDepthZ平面的交点
-            // 射线方程: P = camera + t * rayDir
-            // 平面方程: Z = targetDepthZ
-            // 求解: cameraWorldZ + t * rayDirZ = targetDepthZ
-            if (kotlin.math.abs(rayDirZ) < 1e-6f) {
-                // 射线与平面平行，无交点
-                return null
-            }
-
-            val t = (targetDepthZ - cameraWorldZ) / rayDirZ
-            // 移除t < 0的限制，允许在相机前后方向上的投射
-            // if (t < 0) {
-            //     // 交点在相机后方
-            //     return null
-            // }
-
-            val intersectionX = cameraWorldX + t * rayDirX
-            val intersectionY = cameraWorldY + t * rayDirY
-
-            Log.d(TAG, "Camera position: ($cameraWorldX, $cameraWorldY, $cameraWorldZ)")
-            Log.d(TAG, "Ray direction: ($rayDirX, $rayDirY, $rayDirZ)")
-            Log.d(TAG, "Target depth: $targetDepthZ, t: $t")
-            Log.d(TAG, "Intersection: ($intersectionX, $intersectionY, $targetDepthZ)")
-
-            return floatArrayOf(intersectionX, intersectionY, targetDepthZ)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error converting screen to world position at depth", e)
-            return null
-        }
-    }
-
-    /**
      * 在指定的摄像机距离上将屏幕坐标转换为世界坐标
      * 使用深度不变原则：保持物体与摄像机的距离不变
-     * @param screenX 屏幕X坐标
+     * @param screenX 屏幕X坐标1
      * @param screenY 屏幕Y坐标
      * @param cameraDistance 与摄像机的距离
      * @return 世界坐标数组[x, y, z]，如果转换失败返回null
@@ -1287,112 +1255,8 @@ class MainActivity : Activity() {
     }
 
     /**
-     * 将屏幕坐标转换为相机平面上的世界坐标
-     * @param screenX 屏幕X坐标
-     * @param screenY 屏幕Y坐标
-     * @param depth 指定的深度值，如果为null则使用小方块当前深度
-     * @return 世界坐标数组[x, y, z]，如果转换失败返回null
+     * 帧回调，在每一帧被 Choreographer 调用
      */
-    private fun screenToWorldPosition(
-        screenX: Float,
-        screenY: Float,
-        depth: Float? = null
-    ): FloatArray? {
-        try {
-            // 获取视图矩阵和投影矩阵
-            val viewMatrix = DoubleArray(16)
-            val projectionMatrix = DoubleArray(16)
-            camera.getViewMatrix(viewMatrix)
-            camera.getProjectionMatrix(projectionMatrix)
-
-            // 转换为Float数组
-            val viewMatrixFloat = viewMatrix.map { it.toFloat() }.toFloatArray()
-            val projectionMatrixFloat = projectionMatrix.map { it.toFloat() }.toFloatArray()
-
-            // 计算视图投影矩阵的逆矩阵
-            val vpMatrix = FloatArray(16)
-            val vpInverseMatrix = FloatArray(16)
-            android.opengl.Matrix.multiplyMM(
-                vpMatrix,
-                0,
-                projectionMatrixFloat,
-                0,
-                viewMatrixFloat,
-                0
-            )
-
-            if (!android.opengl.Matrix.invertM(vpInverseMatrix, 0, vpMatrix, 0)) {
-                return null // 矩阵不可逆
-            }
-
-            // 将屏幕坐标转换为NDC坐标
-            val ndcX = (screenX / surfaceView.width) * 2.0f - 1.0f
-            val ndcY = -((screenY / surfaceView.height) * 2.0f - 1.0f) // Y轴翻转
-
-            // 使用指定的深度值或计算当前小方块的深度
-            val useDepth = depth ?: run {
-                val currentWorldPos = floatArrayOf(smallBoxX, smallBoxY, smallBoxZ, 1.0f)
-                val currentViewPos = FloatArray(4)
-                android.opengl.Matrix.multiplyMV(
-                    currentViewPos,
-                    0,
-                    viewMatrixFloat,
-                    0,
-                    currentWorldPos,
-                    0
-                )
-                -currentViewPos[2] // 相机空间中的Z深度（负值转正值）
-            }
-
-            // 创建射线：从相机位置到屏幕点在指定深度处的世界坐标
-            // 首先获取相机在世界空间的位置
-            val cameraWorldPos = FloatArray(3)
-            val invViewMatrix = FloatArray(16)
-            android.opengl.Matrix.invertM(invViewMatrix, 0, viewMatrixFloat, 0)
-            cameraWorldPos[0] = invViewMatrix[12]
-            cameraWorldPos[1] = invViewMatrix[13]
-            cameraWorldPos[2] = invViewMatrix[14]
-
-            // 计算射线方向（从相机到屏幕点的方向）
-            val nearPlane = 0.1f
-            val farPlane = 20.0f
-
-            // 在近平面上的点
-            val nearNdcZ = -1.0f
-            val nearNdcPos = floatArrayOf(ndcX, ndcY, nearNdcZ, 1.0f)
-            val nearWorldPos = FloatArray(4)
-            android.opengl.Matrix.multiplyMV(nearWorldPos, 0, vpInverseMatrix, 0, nearNdcPos, 0)
-            if (nearWorldPos[3] != 0.0f) {
-                nearWorldPos[0] /= nearWorldPos[3]
-                nearWorldPos[1] /= nearWorldPos[3]
-                nearWorldPos[2] /= nearWorldPos[3]
-            }
-
-            // 计算射线方向
-            val rayDirX = nearWorldPos[0] - cameraWorldPos[0]
-            val rayDirY = nearWorldPos[1] - cameraWorldPos[1]
-            val rayDirZ = nearWorldPos[2] - cameraWorldPos[2]
-
-            // 归一化射线方向
-            val rayLength =
-                kotlin.math.sqrt(rayDirX * rayDirX + rayDirY * rayDirY + rayDirZ * rayDirZ)
-            val normalizedRayDirX = rayDirX / rayLength
-            val normalizedRayDirY = rayDirY / rayLength
-            val normalizedRayDirZ = rayDirZ / rayLength
-
-            // 沿射线移动到指定深度
-            val targetWorldX = cameraWorldPos[0] + normalizedRayDirX * useDepth
-            val targetWorldY = cameraWorldPos[1] + normalizedRayDirY * useDepth
-            val targetWorldZ = cameraWorldPos[2] + normalizedRayDirZ * useDepth
-
-            return floatArrayOf(targetWorldX, targetWorldY, targetWorldZ)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error converting screen to world position", e)
-            return null
-        }
-    }
-
-    // 帧回调，在每一帧被 Choreographer 调用
     inner class FrameCallback : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
             // 注册下一帧的回调
@@ -1408,7 +1272,9 @@ class MainActivity : Activity() {
         }
     }
 
-    // UiHelper 的渲染回调，处理 Surface 的生命周期事件
+    /**
+     * UiHelper 的渲染回调，处理 Surface 的生命周期事件
+     */
     inner class SurfaceCallback : UiHelper.RendererCallback {
         // 当本地窗口（Surface）创建或改变时调用
         override fun onNativeWindowChanged(surface: Surface) {
