@@ -248,53 +248,37 @@ public class Camera {
     }
 
     /**
-     * Sets the projection matrix from the field-of-view.
+     * Sets the projection matrix from the field-of-view.从视野角度设置投影矩阵。
      *
-     * @param fovInDegrees  full field-of-view in degrees.
-     *                      0 < <code>fovInDegrees</code> < 180
-     *
-     * @param aspect        aspect ratio width/height. <code>aspect</code> > 0
-     *
-     * @param near          distance in world units from the camera to the near plane.
-     *                      The near plane's position in view space is z = -<code>near</code>.
-     *                      Precondition:
-     *                      <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
-     *                      <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
-     *
-     * @param far           distance in world units from the camera to the far plane.
-     *                      The far plane's position in view space is z = -<code>far</code>.
-     *                      Precondition:
-     *                      <code>far</code> > <code>near</code>
-     *                              for {@link Projection#PERSPECTIVE} or
-     *                      <code>far</code> != <code>near</code>
-     *                              for {@link Projection#ORTHO}.
-     *
-     * @param direction    direction of the field-of-view parameter.
-     * <p>
-     * These parameters are silently modified to meet the preconditions above.
-     *
-     * @see Fov
-     */
-    /**
-     * 从视野角度设置投影矩阵。
-     *
-     * @param fovInDegrees 完整视野角度（度）。
+     * @param fovInDegrees full field-of-view in degrees.完整视野角度（度）。
      *                     0 < <code>fovInDegrees</code> < 180
-     * @param aspect       宽高比 宽度/高度。<code>aspect</code> > 0
-     * @param near         从相机到近平面的世界单位距离。
+     * @param aspect       aspect ratio width/height. 宽高比 宽度/高度。<code>aspect</code> > 0
+     * @param near         distance in world units from the camera to the near plane.
+     *                     The near plane's position in view space is z = -<code>near</code>.
+     *                     Precondition:
+     *                     <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
+     *                     <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
+     *                     从相机到近平面的世界单位距离。
      *                     近平面在视图空间中的位置是 z = -<code>near</code>。
      *                     前提条件：
      *                     对于 {@link Projection#PERSPECTIVE}，<code>near</code> > 0 或
      *                     对于 {@link Projection#ORTHO}，<code>near</code> != <code>far</code>。
-     * @param far          从相机到远平面的世界单位距离。
+     * @param far          distance in world units from the camera to the far plane.
+     *                     The far plane's position in view space is z = -<code>far</code>.
+     *                     Precondition:
+     *                     <code>far</code> > <code>near</code>
+     *                     for {@link Projection#PERSPECTIVE} or
+     *                     <code>far</code> != <code>near</code>
+     *                     for {@link Projection#ORTHO}.
+     *                     从相机到远平面的世界单位距离。
      *                     远平面在视图空间中的位置是 z = -<code>far</code>。
      *                     前提条件：
      *                     对于 {@link Projection#PERSPECTIVE}，<code>far</code> > <code>near</code>
      *                     或
      *                     对于 {@link Projection#ORTHO}，<code>far</code> != <code>near</code>。
-     * @param direction    视野参数的方向。
+     * @param direction    direction of the field-of-view parameter.视野参数的方向。
      *                     <p>
-     *                     这些参数会被静默修改以满足上述前提条件。
+     *                     These parameters are silently modified to meet the preconditions above.这些参数会被静默修改以满足上述前提条件。
      * @see Fov
      */
     public void setProjection(double fovInDegrees, double aspect, double near, double far,
@@ -303,38 +287,28 @@ public class Camera {
     }
 
     /**
-     * Sets the projection matrix from the focal length.
+     * Sets the projection matrix from the focal length.从焦距设置投影矩阵。
      *
-     * @param focalLength   lens's focal length in millimeters. <code>focalLength</code> > 0
-     *
-     * @param aspect        aspect ratio width/height. <code>aspect</code> > 0
-     *
-     * @param near          distance in world units from the camera to the near plane.
-     *                      The near plane's position in view space is z = -<code>near</code>.
-     *                      Precondition:
-     *                      <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
-     *                      <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
-     *
-     * @param far           distance in world units from the camera to the far plane.
-     *                      The far plane's position in view space is z = -<code>far</code>.
-     *                      Precondition:
-     *                      <code>far</code> > <code>near</code>
-     *                              for {@link Projection#PERSPECTIVE} or
-     *                      <code>far</code> != <code>near</code>
-     *                              for {@link Projection#ORTHO}.
-     *
-     */
-    /**
-     * 从焦距设置投影矩阵。
-     *
-     * @param focalLength 镜头焦距（毫米）。<code>focalLength</code> > 0
-     * @param aspect      宽高比 宽度/高度。<code>aspect</code> > 0
-     * @param near        从相机到近平面的世界单位距离。
+     * @param focalLength lens's focal length in millimeters. 镜头焦距（毫米）。<code>focalLength</code> > 0
+     * @param aspect      aspect ratio width/height. 宽高比 宽度/高度。<code>aspect</code> > 0
+     * @param near        distance in world units from the camera to the near plane.
+     *                    The near plane's position in view space is z = -<code>near</code>.
+     *                    Precondition:
+     *                    <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
+     *                    <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
+     *                    从相机到近平面的世界单位距离。
      *                    近平面在视图空间中的位置是 z = -<code>near</code>。
      *                    前提条件：
      *                    对于 {@link Projection#PERSPECTIVE}，<code>near</code> > 0 或
      *                    对于 {@link Projection#ORTHO}，<code>near</code> != <code>far</code>。
-     * @param far         从相机到远平面的世界单位距离。
+     * @param far         distance in world units from the camera to the far plane.
+     *                    The far plane's position in view space is z = -<code>far</code>.
+     *                    Precondition:
+     *                    <code>far</code> > <code>near</code>
+     *                    for {@link Projection#PERSPECTIVE} or
+     *                    <code>far</code> != <code>near</code>
+     *                    for {@link Projection#ORTHO}.
+     *                    从相机到远平面的世界单位距离。
      *                    远平面在视图空间中的位置是 z = -<code>far</code>。
      *                    前提条件：
      *                    对于 {@link Projection#PERSPECTIVE}，<code>far</code> > <code>near</code>
@@ -346,40 +320,31 @@ public class Camera {
     }
 
     /**
-     * Sets a custom projection matrix.
+     * Sets a custom projection matrix.设置自定义投影矩阵。
      *
      * <p>The projection matrix must define an NDC system that must match the OpenGL convention,
      * that is all 3 axis are mapped to [-1, 1].</p>
+     * 投影矩阵必须定义一个符合OpenGL约定的NDC系统，即所有3个轴都映射到[-1, 1]。
      *
-     * @param inProjection  custom projection matrix for rendering and culling
-     *
-     * @param near          distance in world units from the camera to the near plane.
-     *                      The near plane's position in view space is z = -<code>near</code>.
-     *                      Precondition:
-     *                      <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
-     *                      <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
-     *
-     * @param far           distance in world units from the camera to the far plane.
-     *                      The far plane's position in view space is z = -<code>far</code>.
-     *                      Precondition:
-     *                      <code>far</code> > <code>near</code>
-     *                              for {@link Projection#PERSPECTIVE} or
-     *                      <code>far</code> != <code>near</code>
-     *                              for {@link Projection#ORTHO}.
-     */
-    /**
-     * 设置自定义投影矩阵。
-     *
-     * <p>投影矩阵必须定义一个符合OpenGL约定的NDC系统，
-     * 即所有3个轴都映射到[-1, 1]。</p>
-     *
-     * @param inProjection 用于渲染和剔除的自定义投影矩阵
-     * @param near         从相机到近平面的世界单位距离。
+     * @param inProjection custom projection matrix for rendering and culling 用于渲染和剔除的自定义投影矩阵
+     * @param near         distance in world units from the camera to the near plane.
+     *                     The near plane's position in view space is z = -<code>near</code>.
+     *                     Precondition:
+     *                     <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
+     *                     <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
+     *                     从相机到近平面的世界单位距离。
      *                     近平面在视图空间中的位置是 z = -<code>near</code>。
      *                     前提条件：
      *                     对于 {@link Projection#PERSPECTIVE}，<code>near</code> > 0 或
      *                     对于 {@link Projection#ORTHO}，<code>near</code> != <code>far</code>。
-     * @param far          从相机到远平面的世界单位距离。
+     * @param far          distance in world units from the camera to the far plane.
+     *                     The far plane's position in view space is z = -<code>far</code>.
+     *                     Precondition:
+     *                     <code>far</code> > <code>near</code>
+     *                     for {@link Projection#PERSPECTIVE} or
+     *                     <code>far</code> != <code>near</code>
+     *                     for {@link Projection#ORTHO}.
+     *                     从相机到远平面的世界单位距离。
      *                     远平面在视图空间中的位置是 z = -<code>far</code>。
      *                     前提条件：
      *                     对于 {@link Projection#PERSPECTIVE}，<code>far</code> > <code>near</code>
@@ -393,43 +358,32 @@ public class Camera {
     }
 
     /**
-     * Sets a custom projection matrix.
+     * Sets a custom projection matrix.设置自定义投影矩阵。
      *
      * <p>The projection matrices must define an NDC system that must match the OpenGL convention,
      * that is all 3 axis are mapped to [-1, 1].</p>
+     * 投影矩阵必须定义一个符合OpenGL约定的NDC系统，即所有3个轴都映射到[-1, 1]。
      *
-     * @param inProjection              custom projection matrix for rendering.
-     *
-     * @param inProjectionForCulling    custom projection matrix for culling.
-     *
-     * @param near          distance in world units from the camera to the near plane.
-     *                      The near plane's position in view space is z = -<code>near</code>.
-     *                      Precondition:
-     *                      <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
-     *                      <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
-     *
-     * @param far           distance in world units from the camera to the far plane.
-     *                      The far plane's position in view space is z = -<code>far</code>.
-     *                      Precondition:
-     *                      <code>far</code> > <code>near</code>
-     *                              for {@link Projection#PERSPECTIVE} or
-     *                      <code>far</code> != <code>near</code>
-     *                              for {@link Projection#ORTHO}.
-     */
-    /**
-     * 设置自定义投影矩阵。
-     *
-     * <p>投影矩阵必须定义一个符合OpenGL约定的NDC系统，
-     * 即所有3个轴都映射到[-1, 1]。</p>
-     *
-     * @param inProjection           用于渲染的自定义投影矩阵。
-     * @param inProjectionForCulling 用于剔除的自定义投影矩阵。
-     * @param near                   从相机到近平面的世界单位距离。
+     * @param inProjection           custom projection matrix for rendering.用于渲染的自定义投影矩阵。
+     * @param inProjectionForCulling custom projection matrix for culling.用于剔除的自定义投影矩阵。
+     * @param near                   distance in world units from the camera to the near plane.
+     *                               The near plane's position in view space is z = -<code>near</code>.
+     *                               Precondition:
+     *                               <code>near</code> > 0 for {@link Projection#PERSPECTIVE} or
+     *                               <code>near</code> != <code>far</code> for {@link Projection#ORTHO}.
+     *                               从相机到近平面的世界单位距离。
      *                               近平面在视图空间中的位置是 z = -<code>near</code>。
      *                               前提条件：
      *                               对于 {@link Projection#PERSPECTIVE}，<code>near</code> > 0 或
      *                               对于 {@link Projection#ORTHO}，<code>near</code> != <code>far</code>。
-     * @param far                    从相机到远平面的世界单位距离。
+     * @param far                    distance in world units from the camera to the far plane.
+     *                               The far plane's position in view space is z = -<code>far</code>.
+     *                               Precondition:
+     *                               <code>far</code> > <code>near</code>
+     *                               for {@link Projection#PERSPECTIVE} or
+     *                               <code>far</code> != <code>near</code>
+     *                               for {@link Projection#ORTHO}.
+     *                               从相机到远平面的世界单位距离。
      *                               远平面在视图空间中的位置是 z = -<code>far</code>。
      *                               前提条件：
      *                               对于 {@link Projection#PERSPECTIVE}，<code>far</code> > <code>near</code>
@@ -447,52 +401,28 @@ public class Camera {
 
     /**
      * Sets an additional matrix that scales the projection matrix.
+     * 设置一个额外的矩阵来缩放投影矩阵。
      *
      * <p>This is useful to adjust the aspect ratio of the camera independent from its projection.
      * First, pass an aspect of 1.0 to setProjection. Then set the scaling with the desired aspect
      * ratio:<br>
-     *
-     * <code>
-     *     double aspect = width / height;
-     *
-     *     // with Fov.HORIZONTAL passed to setProjection:
-     *     camera.setScaling(1.0, aspect);
-     *
-     *     // with Fov.VERTICAL passed to setProjection:
-     *     camera.setScaling(1.0 / aspect, 1.0);
-     * </code>
-     *
-     * By default, this is an identity matrix.
-     * </p>
-     *
-     * @param xscaling  horizontal scaling to be applied after the projection matrix.
-     * @param yscaling  vertical scaling to be applied after the projection matrix.
-     *
-     * @see Camera#setProjection
-     * @see Camera#setLensProjection
-     * @see Camera#setCustomProjection
-     */
-    /**
-     * 设置一个额外的矩阵来缩放投影矩阵。
-     *
-     * <p>这对于独立于投影调整相机的宽高比很有用。
-     * 首先，向setProjection传递1.0的宽高比。然后用所需的宽高比设置缩放：<br>
+     * 这对于独立于投影调整相机的宽高比很有用。首先，向setProjection传递1.0的宽高比。然后用所需的宽高比设置缩放：
      *
      * <code>
      * double aspect = width / height;
      * <p>
-     * // 当向setProjection传递Fov.HORIZONTAL时：
+     * // with Fov.HORIZONTAL passed to setProjection:当向setProjection传递Fov.HORIZONTAL时：
      * camera.setScaling(1.0, aspect);
      * <p>
-     * // 当向setProjection传递Fov.VERTICAL时：
+     * // with Fov.VERTICAL passed to setProjection:当向setProjection传递Fov.VERTICAL时：
      * camera.setScaling(1.0 / aspect, 1.0);
      * </code>
      * <p>
-     * 默认情况下，这是一个单位矩阵。
+     * By default, this is an identity matrix.默认情况下，这是一个单位矩阵。
      * </p>
      *
-     * @param xscaling 在投影矩阵之后应用的水平缩放。
-     * @param yscaling 在投影矩阵之后应用的垂直缩放。
+     * @param xscaling horizontal scaling to be applied after the projection matrix.在投影矩阵之后应用的水平缩放。
+     * @param yscaling vertical scaling to be applied after the projection matrix.在投影矩阵之后应用的垂直缩放。
      * @see Camera#setProjection
      * @see Camera#setLensProjection
      * @see Camera#setCustomProjection
@@ -615,26 +545,18 @@ public class Camera {
     }
 
     /**
-     * Gets the distance to the near plane
-     * @return Distance to the near plane
-     */
-    /**
-     * 获取到近平面的距离
+     * Gets the distance to the near plane 获取到近平面的距离
      *
-     * @return 到近平面的距离
+     * @return Distance to the near plane到近平面的距离
      */
     public float getNear() {
         return (float) nGetNear(getNativeObject());
     }
 
     /**
-     * Gets the distance to the far plane
-     * @return Distance to the far plane
-     */
-    /**
-     * 获取到远平面的距离
+     * Gets the distance to the far plane 获取到远平面的距离
      *
-     * @return 到远平面的距离
+     * @return Distance to the far plane 到远平面的距离
      */
     public float getCullingFar() {
         return (float) nGetCullingFar(getNativeObject());
@@ -663,19 +585,13 @@ public class Camera {
     /**
      * Retrieves the camera's culling matrix. The culling matrix is the same as the projection
      * matrix, except the far plane is finite.
+     * 获取相机的剔除矩阵。剔除矩阵与投影矩阵相同，除了远平面是有限的。
      *
      * @param out A 16-float array where the projection matrix will be stored, or null in which
      *            case a new array is allocated.
-     *
+     *            存储投影矩阵的16个浮点数数组，如果为null则分配一个新数组。
      * @return A 16-float array containing the camera's projection as a column-major matrix.
-     */
-    /**
-     * 获取相机的剔除矩阵。剔除矩阵与投影矩阵相同，
-     * 除了远平面是有限的。
-     *
-     * @param out 存储投影矩阵的16个浮点数数组，如果为null则
-     *            分配一个新数组。
-     * @return 包含相机投影的16个浮点数数组，以列主序矩阵形式。
+     * 包含相机投影的16个浮点数数组，以列主序矩阵形式。
      */
     @NonNull
     @Size(min = 16)
