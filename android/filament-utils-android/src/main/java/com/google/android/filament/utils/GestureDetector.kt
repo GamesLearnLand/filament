@@ -21,13 +21,30 @@ import android.view.View
 import java.util.*
 
 /**
- * Responds to Android touch events and manages a camera manipulator.
- * Supports one-touch orbit, two-touch pan, and pinch-to-zoom.
+ * 手势检测器，用于处理Android触摸事件并控制相机操作
+ * 支持以下手势：
+ * - 单指滑动：轨道旋转(Orbit)
+ * - 双指滑动：平移(Pan)
+ * - 捏合手势：缩放(Zoom)
+ * @param view 用于获取视图尺寸的Android View
+ * @param manipulator 需要控制的相机操作器
  */
 class GestureDetector(private val view: View, private val manipulator: Manipulator) {
+    /**
+     * 手势类型枚举
+     * NONE - 无手势
+     * ORBIT - 轨道旋转(单指操作)
+     * PAN - 平移(双指平移)
+     * ZOOM - 缩放(双指捏合/张开)
+     */
     private enum class Gesture { NONE, ORBIT, PAN, ZOOM }
 
-    // Simplified memento of MotionEvent, minimal but sufficient for our purposes.
+    /**
+     * 触摸点数据封装类，用于记录连续触摸事件
+     * @param pt0 第一个触摸点坐标
+     * @param pt1 第二个触摸点坐标
+     * @param count 当前触点数量
+     */
     private data class TouchPair(var pt0: Float2, var pt1: Float2, var count: Int) {
         constructor() : this(Float2(0f), Float2(0f), 0)
         constructor(me: MotionEvent, height: Int) : this() {
@@ -58,6 +75,13 @@ class GestureDetector(private val view: View, private val manipulator: Manipulat
     private val kZoomConfidenceDistance = 10
     private val kZoomSpeed = 1f / 10f
 
+    /**
+     * 触摸事件处理核心方法
+     * 主要处理逻辑：
+     * 1. 意外触点变化时取消当前手势
+     * 2. 更新正在进行的手势
+     * 3. 根据触摸历史判断新手势
+     */
     fun onTouchEvent(event: MotionEvent) {
         val touch = TouchPair(event, view.height)
         when (event.actionMasked) {
@@ -122,6 +146,10 @@ class GestureDetector(private val view: View, private val manipulator: Manipulat
         }
     }
 
+    /**
+     * 结束当前手势并重置状态
+     * 清空所有手势历史记录
+     */
     private fun endGesture() {
         tentativePanEvents.clear()
         tentativeOrbitEvents.clear()
@@ -130,10 +158,20 @@ class GestureDetector(private val view: View, private val manipulator: Manipulat
         manipulator.grabEnd()
     }
 
+    /**
+     * 判断是否形成轨道旋转手势
+     * 通过记录的单指移动事件数量判断
+     * @return 是否为轨道旋转手势
+     */
     private fun isOrbitGesture(): Boolean {
         return tentativeOrbitEvents.size > kGestureConfidenceCount
     }
 
+    /**
+     * 判断是否形成平移手势
+     * 通过双指移动的距离差判断
+     * @return 是否为平移手势
+     */
     private fun isPanGesture(): Boolean {
         if (tentativePanEvents.size <= kGestureConfidenceCount) {
             return false
@@ -143,6 +181,11 @@ class GestureDetector(private val view: View, private val manipulator: Manipulat
         return distance(oldest, newest) > kPanConfidenceDistance
     }
 
+    /**
+     * 判断是否形成缩放手势
+     * 通过双指间距变化量判断
+     * @return 是否为缩放手势
+     */
     private fun isZoomGesture(): Boolean {
         if (tentativeZoomEvents.size <= kGestureConfidenceCount) {
             return false

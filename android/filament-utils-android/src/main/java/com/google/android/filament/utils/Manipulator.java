@@ -22,14 +22,22 @@ import androidx.annotation.Nullable;
 import androidx.annotation.Size;
 
 /**
- * Helper that enables camera interaction similar to sketchfab or Google Maps.
- *
- * Clients notify the camera manipulator of various mouse or touch events, then periodically call
- * its getLookAt() method so that they can adjust their camera(s). Three modes are supported: ORBIT,
- * MAP, and FREE_FLIGHT. To construct a manipulator instance, the desired mode is passed into the
- * create method.
- *
- * @see Bookmark
+ * 相机操作器，提供类似sketchfab或Google Maps的相机交互功能
+ * 
+ * 客户端通过各种鼠标/触摸事件通知操作器，然后周期性调用getLookAt()方法调整相机
+ * 支持三种操作模式：
+ * - ORBIT：轨道模式，绕目标点旋转（如三维模型查看）
+ * - MAP：地图模式，平面移动（如二维地图浏览）
+ * - FREE_FLIGHT：自由飞行模式（如三维场景漫游）
+ * 
+ * 使用Builder模式构建实例，包含以下核心功能：
+ * 1. 相机姿态控制（位置/目标点/朝向）
+ * 2. 多种交互模式支持
+ * 3. 视口尺寸适配
+ * 4. 地面投影计算
+ * 5. 书签功能（保存/恢复相机状态）
+ * 
+ * @see Bookmark 用于保存相机状态的书签类
  */
 public class Manipulator {
     private static final Mode[] sModeValues = Mode.values();
@@ -40,14 +48,26 @@ public class Manipulator {
         mNativeObject = nativeIndexBuffer;
     }
 
+    /**
+     * 操作模式枚举
+     * ORBIT - 轨道模式：绕目标点旋转，适合三维模型查看
+     * MAP - 地图模式：平面移动，适合二维地图浏览
+     * FREE_FLIGHT - 自由飞行模式：全自由度移动，适合三维场景漫游
+     */
     public enum Mode { ORBIT, MAP, FREE_FLIGHT };
 
+    /**
+     * 视场角方向枚举
+     * VERTICAL - 垂直方向视场角固定（默认）
+     * HORIZONTAL - 水平方向视场角固定
+     */
     public enum Fov { VERTICAL, HORIZONTAL };
 
     /**
-     * Keys used to translate the camera in FREE_FLIGHT mode.
-     * UP and DOWN dolly the camera forwards and backwards.
-     * LEFT and RIGHT strafe the camera left and right.
+     * 自由飞行模式控制键位
+     * FORWARD/BACKWARD - 前进/后退
+     * LEFT/RIGHT - 左移/右移
+     * UP/DOWN - 上升/下降
      */
     public enum Key {
         FORWARD,
@@ -58,6 +78,19 @@ public class Manipulator {
         DOWN
     }
 
+    /**
+     * 构建器类，用于配置Manipulator实例的创建参数
+     * 提供链式调用接口设置以下参数：
+     * - 视口尺寸（viewport）
+     * - 相机目标点（targetPosition）
+     * - 初始朝向（upVector）
+     * - 缩放速度（zoomSpeed）
+     * - 轨道模式参数（orbitHomePosition, orbitSpeed）
+     * - 视场参数（fovDirection, fovDegrees）
+     * - 渲染参数（farPlane）
+     * - 地图模式参数（mapExtent, mapMinDistance）
+     * - 自由飞行模式参数（flightStartPosition, flightStartOrientation等）
+     */
     public static class Builder {
         @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"})
         // Keep to finalize native resources
@@ -70,9 +103,11 @@ public class Manipulator {
         }
 
         /**
-         * Width and height of the viewing area.
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置视口尺寸
+         * 
+         * @param width 视口宽度（像素），必须≥1
+         * @param height 视口高度（像素），必须≥1
+         * @return 构建器实例用于链式调用
          */
         @NonNull
         public Builder viewport(@IntRange(from = 1) int width, @IntRange(from = 1) int height) {
@@ -81,9 +116,12 @@ public class Manipulator {
         }
 
         /**
-         * Sets world-space position of interest, which defaults to (0,0,0).
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置相机目标点位置
+         * 
+         * @param x 目标点X坐标
+         * @param y 目标点Y坐标
+         * @param z 目标点Z坐标
+         * @return 构建器实例用于链式调用
          */
         @NonNull
         public Builder targetPosition(float x, float y, float z) {
@@ -92,9 +130,12 @@ public class Manipulator {
         }
 
         /**
-         * Sets orientation for the home position, which defaults to (0,1,0).
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置初始朝向向量
+         * 
+         * @param x 向量X分量
+         * @param y 向量Y分量
+         * @param z 向量Z分量
+         * @return 构建器实例用于链式调用
          */
         @NonNull
         public Builder upVector(float x, float y, float z) {
@@ -103,9 +144,10 @@ public class Manipulator {
         }
 
         /**
-         * Sets the scroll delta multiplier, which defaults to 0.01.
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置缩放速度
+         * 
+         * @param arg 缩放速度系数，默认0.01
+         * @return 构建器实例用于链式调用
          */
         @NonNull
         public Builder zoomSpeed(float arg) {
@@ -114,10 +156,12 @@ public class Manipulator {
         }
 
         /**
-         * Sets initial eye position in world space for ORBIT mode.
-         * This defaults to (0,0,1).
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置轨道模式初始位置
+         * 
+         * @param x 初始位置X坐标
+         * @param y 初始位置Y坐标
+         * @param z 初始位置Z坐标
+         * @return 构建器实例用于链式调用
          */
         @NonNull
         public Builder orbitHomePosition(float x, float y, float z) {
@@ -126,10 +170,11 @@ public class Manipulator {
         }
 
         /**
-         * Sets the multiplier with viewport delta for ORBIT mode.
-         * This defaults to 0.01
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置轨道模式速度系数
+         * 
+         * @param x X方向速度系数
+         * @param y Y方向速度系数
+         * @return 构建器实例用于链式调用
          */
         @NonNull
         public Builder orbitSpeed(float x, float y) {
@@ -138,10 +183,10 @@ public class Manipulator {
         }
 
         /**
-         * Sets the FOV axis that's held constant when the viewport changes.
-         * This defaults to Vertical.
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置视场角方向
+         * 
+         * @param fov 视场角方向（VERTICAL/HORIZONTAL）
+         * @return 构建器实例用于链式调用
          */
         @NonNull
         public Builder fovDirection(Fov fov) {
@@ -150,10 +195,10 @@ public class Manipulator {
         }
 
         /**
-         * Sets the full FOV (not the half-angle) in the degrees.
-         * This defaults to 33.
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置视场角大小
+         * 
+         * @param arg 视场角大小（度数）
+         * @return 构建器实例用于链式调用
          */
         @NonNull
         public Builder fovDegrees(float arg) {
@@ -162,9 +207,10 @@ public class Manipulator {
         }
 
         /**
-         * Sets the distance to the far plane, which defaults to 5000.
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置远裁剪面距离
+         * 
+         * @param arg 远裁剪面距离
+         * @return 构建器实例用于链式调用
          */
         @NonNull
         public Builder farPlane(float arg) {
@@ -173,10 +219,11 @@ public class Manipulator {
         }
 
         /**
-         * Sets the ground plane size used to compute the home position for MAP mode.
-         * This defaults to 512 x 512
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置地图模式地面尺寸
+         * 
+         * @param width 地面宽度
+         * @param height 地面高度
+         * @return 构建器实例用于链式调用
          */
         @NonNull
         public Builder mapExtent(float width, float height) {
@@ -185,9 +232,10 @@ public class Manipulator {
         }
 
         /**
-         * Constrains the zoom-in level. Defaults to 0.
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置地图模式最小距离
+         * 
+         * @param arg 最小距离
+         * @return 构建器实例用于链式调用
          */
         @NonNull
         public Builder mapMinDistance(float arg) {
@@ -196,9 +244,12 @@ public class Manipulator {
         }
 
         /**
-         * Sets the initial eye position in world space for FREE_FLIGHT mode. Defaults to (0,0,0).
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置自由飞行模式初始位置
+         * 
+         * @param x 初始位置X坐标
+         * @param y 初始位置Y坐标
+         * @param z 初始位置Z坐标
+         * @return 构建器实例用于链式调用
          */
         public Builder flightStartPosition(float x, float y, float z) {
             nBuilderFlightStartPosition(mNativeBuilder, x, y, z);
@@ -206,9 +257,11 @@ public class Manipulator {
         }
 
         /**
-         * Sets the initial orientation in pitch and yaw for FREE_FLIGHT mode. Defaults to (0,0).
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置自由飞行模式初始朝向
+         * 
+         * @param pitch 俯仰角
+         * @param yaw 偏航角
+         * @return 构建器实例用于链式调用
          */
         public Builder flightStartOrientation(float pitch, float yaw) {
             nBuilderFlightStartOrientation(mNativeBuilder, pitch, yaw);
@@ -216,10 +269,10 @@ public class Manipulator {
         }
 
         /**
-         * Sets the maximum camera translation speed in world units per second for FREE_FLIGHT mode.
-         * Defaults to 10.
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置自由飞行模式最大移动速度
+         * 
+         * @param maxSpeed 最大移动速度
+         * @return 构建器实例用于链式调用
          */
         public Builder flightMaxMoveSpeed(float maxSpeed) {
             nBuilderFlightMaxMoveSpeed(mNativeBuilder, maxSpeed);
@@ -227,10 +280,10 @@ public class Manipulator {
         }
 
         /**
-         * Sets the number of speed steps adjustable with scroll wheel for FREE_FLIGHT mode.
-         * Defaults to 80.
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置自由飞行模式速度步数
+         * 
+         * @param steps 速度步数
+         * @return 构建器实例用于链式调用
          */
         public Builder flightSpeedSteps(int steps) {
             nBuilderFlightSpeedSteps(mNativeBuilder, steps);
@@ -238,10 +291,11 @@ public class Manipulator {
         }
 
        /**
-        * Sets the multiplier with viewport delta for FREE_FLIGHT mode.
-        * This defaults to 0.01.
-        *
-        * @return this <code>Builder</code> object for chaining calls
+        * 设置自由飞行模式平移速度系数
+        * 
+        * @param x X方向速度系数
+        * @param y Y方向速度系数
+        * @return 构建器实例用于链式调用
         */
         public Builder flightPanSpeed(float x, float y) {
             nBuilderFlightPanSpeed(mNativeBuilder, x, y);
@@ -249,12 +303,10 @@ public class Manipulator {
         }
 
        /**
-        * Applies a deceleration to camera movement in FREE_FLIGHT mode. Defaults to 0 (no damping).
-        *
-        * Lower values give slower damping times. A good default is 15.0. Too high a value may lead
-        * to instability.
-        *
-        * @return this <code>Builder</code> object for chaining calls
+        * 设置自由飞行模式移动阻尼
+        * 
+        * @param damping 阻尼系数
+        * @return 构建器实例用于链式调用
         */
         public Builder flightMoveDamping(float damping) {
             nBuilderFlightMoveDamping(mNativeBuilder, damping);
@@ -262,11 +314,13 @@ public class Manipulator {
         }
 
         /**
-         * Sets the ground plane equation used for ray casts.
-         * This is a plane equation as in Ax + By + Cz + D = 0.
-         * Defaults to (0, 0, 1, 0).
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置地面平面方程
+         * 
+         * @param a 平面方程系数A
+         * @param b 平面方程系数B
+         * @param c 平面方程系数C
+         * @param d 平面方程系数D
+         * @return 构建器实例用于链式调用
          */
         @NonNull
         public Builder groundPlane(float a, float b, float c, float d) {
@@ -275,9 +329,10 @@ public class Manipulator {
         }
 
         /**
-         * Sets whether panning is enabled in the manipulator.
-         *
-         * @return this <code>Builder</code> object for chaining calls
+         * 设置是否启用平移操作
+         * 
+         * @param enabled 是否启用平移
+         * @return 构建器实例用于链式调用
          */
         @NonNull
         public Builder panning(Boolean enabled) {
@@ -286,12 +341,11 @@ public class Manipulator {
         }
 
         /**
-         * Creates and returns the <code>Manipulator</code> object.
-         *
-         * @return the newly created <code>Manipulator</code> object
-         *
-         * @exception IllegalStateException if the Manipulator could not be created
-         *
+         * 构建并返回Manipulator实例
+         * 
+         * @param mode 操作模式（ORBIT/MAP/FREE_FLIGHT）
+         * @return 新创建的Manipulator实例
+         * @exception IllegalStateException 如果创建失败抛出异常
          */
         @NonNull
         public Manipulator build(Mode mode) {
@@ -331,22 +385,28 @@ public class Manipulator {
     }
 
     /**
-     * Gets the immutable mode of the manipulator.
+     * 获取当前操作模式
+     * 
+     * @return 当前模式（ORBIT/MAP/FREE_FLIGHT）
      */
     public Mode getMode() { return sModeValues[nGetMode(mNativeObject)]; }
 
     /**
-     * Sets the viewport dimensions in terms of pixels.
-     *
-     * The manipulator uses this only in the grab and raycast methods, since
-     * those methods consume coordinates in viewport space.
+     * 设置视口尺寸（像素级）
+     * 
+     * @param width 视口宽度
+     * @param height 视口高度
      */
     public void setViewport(int width, int height) {
         nSetViewport(mNativeObject, width, height);
     }
 
     /**
-     * Gets the current orthonormal basis. This is usually called once per frame.
+     * 获取当前相机姿态矩阵
+     * 
+     * @param eyePosition 相机位置数组（至少3个元素）
+     * @param targetPosition 目标点位置数组（至少3个元素）
+     * @param upward 向上方向数组（至少3个元素）
      */
     public void getLookAt(
             @NonNull @Size(min = 3) float[] eyePosition,
@@ -363,7 +423,11 @@ public class Manipulator {
     }
 
     /**
-     * Given a viewport coordinate, picks a point in the ground plane.
+     * 执行视口坐标到地面平面的射线检测
+     * 
+     * @param x 视口X坐标
+     * @param y 视口Y坐标
+     * @return 交点坐标数组（长度3），若无交点返回null
      */
     @Nullable @Size(min = 3)
     public float[] raycast(int x, int y) {
@@ -373,82 +437,77 @@ public class Manipulator {
     }
 
     /**
-     * Starts a grabbing session (i.e. the user is dragging around in the viewport).
-     *
-     * In MAP mode, this starts a panning session.
-     * In ORBIT mode, this starts either rotating or strafing.
-     * In FREE_FLIGHT mode, this starts a nodal panning session.
-     *
-     * @param x X-coordinate for point of interest in viewport space
-     * @param y Y-coordinate for point of interest in viewport space
-     * @param strafe ORBIT mode only; if true, starts a translation rather than a rotation
+     * 开始抓取操作（用户开始拖动）
+     * 
+     * @param x 起始点X坐标
+     * @param y 起始点Y坐标
+     * @param strafe 是否为平移操作（仅ORBIT模式有效）
      */
     public void grabBegin(int x, int y, boolean strafe) {
         nGrabBegin(mNativeObject, x, y, strafe);
     }
 
     /**
-     * Updates a grabbing session.
-     *
-     * This must be called at least once between grabBegin / grabEnd to dirty the camera.
+     * 更新抓取操作（用户持续拖动）
+     * 
+     * @param x 当前X坐标
+     * @param y 当前Y坐标
      */
     public void grabUpdate(int x, int y) {
         nGrabUpdate(mNativeObject, x, y);
     }
 
     /**
-     * Ends a grabbing session.
+     * 结束抓取操作（用户停止拖动）
      */
     public void grabEnd() {
         nGrabEnd(mNativeObject);
     }
 
     /**
-     * Keys used to translate the camera in FREE_FLIGHT mode.
-     * UP and DOWN dolly the camera forwards and backwards.
-     * LEFT and RIGHT strafe the camera left and right.
-     * UP and DOWN boom the camera upwards and downwards.
+     * 按下控制键（自由飞行模式专用）
+     * 
+     * @param key 按下的键位（Key枚举）
      */
     public void keyDown(Key key) {
         nKeyDown(mNativeObject, key.ordinal());
     }
 
     /**
-     * Signals that a key is now in the up state.
-     *
-     * @see keyDown
+     * 释放控制键
+     * 
+     * @param key 释放的键位（Key枚举）
      */
     public void keyUp(Key key) {
         nKeyUp(mNativeObject, key.ordinal());
     }
 
     /**
-     * In MAP and ORBIT modes, dollys the camera along the viewing direction.
-     * In FREE_FLIGHT mode, adjusts the move speed of the camera.
-     *
-     * @param x X-coordinate for point of interest in viewport space, ignored in FREE_FLIGHT mode
-     * @param y Y-coordinate for point of interest in viewport space, ignored in FREE_FLIGHT mode
-     * @param scrolldelta In MAP and ORBIT modes, negative means "zoom in", positive means "zoom out"
-     *                    In FREE_FLIGHT mode, negative means "slower", positive means "faster"
+     * 处理滚轮事件
+     * 
+     * @param x 事件X坐标（MAP/ORBIT模式忽略）
+     * @param y 事件Y坐标（MAP/ORBIT模式忽略）
+     * @param scrolldelta 滚轮增量：
+     *                    - MAP/ORBIT模式：负值放大，正值缩小
+     *                    - FREE_FLIGHT模式：负值减速，正值加速
      */
     public void scroll(int x, int y, float scrolldelta) {
         nScroll(mNativeObject, x, y, scrolldelta);
     }
 
     /**
-     * Processes input and updates internal state.
-     *
-     * This must be called once every frame before getLookAt is valid.
-     *
-     * @param deltaTime The amount of time, in seconds, passed since the previous call to update.
+     * 更新相机状态（每帧调用）
+     * 
+     * @param deltaTime 自上次更新以来的时间间隔（秒）
      */
     public void update(float deltaTime) {
         nUpdate(mNativeObject, deltaTime);
     }
 
     /**
-     * Gets a handle that can be used to reset the manipulator back to its current position.
-     *
+     * 获取当前相机状态的书签
+     * 
+     * @return 可用于恢复相机状态的Bookmark对象
      * @see #jumpToBookmark(Bookmark)
      */
     public Bookmark getCurrentBookmark() {
@@ -456,17 +515,19 @@ public class Manipulator {
     }
 
     /**
-     * Gets a handle that can be used to reset the manipulator back to its home position.
-     *
-     * see jumpToBookmark
+     * 获取初始状态的书签
+     * 
+     * @return 可用于恢复到初始状态的Bookmark对象
+     * @see #jumpToBookmark(Bookmark)
      */
     public Bookmark getHomeBookmark() {
         return new Bookmark(nGetHomeBookmark(mNativeObject));
     }
 
     /**
-     * Sets the manipulator position and orientation back to a stashed state.
-     *
+     * 跳转到指定书签状态
+     * 
+     * @param bookmark 包含目标状态的Bookmark对象
      * @see #getCurrentBookmark()
      * @see #getHomeBookmark()
      */
